@@ -1,0 +1,249 @@
+# StarryOS syscall catalog (seed). Run:
+#   python3 scripts/extract_starry_syscalls.py --out-json docs/starryos-syscall-dispatch.json
+#   python3 scripts/extract_starry_syscalls.py --check-catalog docs/starryos-syscall-catalog.yaml
+# Dispatch path is shared by all syscalls below.
+dispatch_path: os/StarryOS/kernel/src/syscall/mod.rs
+
+syscalls:
+  - syscall: openat
+    domain: fs
+    dispatch_path: os/StarryOS/kernel/src/syscall/mod.rs
+    impl_path: os/StarryOS/kernel/src/syscall/fs/
+    status: partial
+    semantic_class: local_io
+    boundary_profiles:
+      - path_lookup
+      - fd_basic
+    core_modes:
+      - smp1
+    linux_refs:
+      - man 2 openat
+    tests: []
+    risk_tags:
+      - errno_mismatch
+      - user_buffer
+    generator_hints:
+      template: contract_errno
+
+  - syscall: execve
+    domain: task
+    dispatch_path: os/StarryOS/kernel/src/syscall/mod.rs
+    impl_path: os/StarryOS/kernel/src/syscall/task/execve.rs
+    status: partial
+    semantic_class: process_image
+    boundary_profiles:
+      - argv_envp_pointers
+    core_modes:
+      - smp1
+    linux_refs:
+      - man 2 execve
+    tests: []
+    risk_tags:
+      - errno_mismatch
+      - user_buffer
+      - cloexec_nonblock
+    generator_hints:
+      template: sequence_stub
+
+  - syscall: wait4
+    domain: task
+    dispatch_path: os/StarryOS/kernel/src/syscall/mod.rs
+    impl_path: os/StarryOS/kernel/src/syscall/task/wait.rs
+    status: partial
+    semantic_class: process_lifecycle
+    boundary_profiles:
+      - status_ptr
+      - options
+    core_modes:
+      - smp1
+      - smp2
+    linux_refs:
+      - man 2 wait4
+    tests: []
+    risk_tags:
+      - errno_mismatch
+      - user_buffer
+    generator_hints:
+      template: contract_errno
+
+  - syscall: pipe2
+    domain: fs
+    dispatch_path: os/StarryOS/kernel/src/syscall/mod.rs
+    impl_path: os/StarryOS/kernel/src/syscall/fs/pipe.rs
+    status: partial
+    semantic_class: ipc_fd
+    boundary_profiles:
+      - flags
+      - pointer_pair
+    core_modes:
+      - smp1
+      - smp2
+    linux_refs:
+      - man 2 pipe2
+    tests: []
+    risk_tags:
+      - errno_mismatch
+      - user_buffer
+      - cloexec_nonblock
+    generator_hints:
+      template: contract_errno
+
+  - syscall: fcntl
+    domain: fs
+    dispatch_path: os/StarryOS/kernel/src/syscall/mod.rs
+    impl_path: os/StarryOS/kernel/src/syscall/fs/fd_ops.rs
+    status: partial
+    semantic_class: fd_control
+    boundary_profiles:
+      - cmd_matrix
+    core_modes:
+      - smp1
+    linux_refs:
+      - man 2 fcntl
+    tests:
+      - test-suit/starryos/probes/contract/fcntl_badfd.c
+    risk_tags:
+      - errno_mismatch
+      - cloexec_nonblock
+    generator_hints:
+      template: contract_errno
+
+  - syscall: clock_gettime
+    domain: time
+    dispatch_path: os/StarryOS/kernel/src/syscall/mod.rs
+    impl_path: os/StarryOS/kernel/src/syscall/time.rs
+    status: partial
+    semantic_class: time
+    boundary_profiles:
+      - timespec_ptr
+    core_modes:
+      - smp1
+    linux_refs:
+      - man 2 clock_gettime
+    tests: []
+    risk_tags:
+      - errno_mismatch
+      - user_buffer
+    generator_hints:
+      template: contract_errno
+
+  - syscall: close
+    domain: fs
+    dispatch_path: os/StarryOS/kernel/src/syscall/mod.rs
+    impl_path: os/StarryOS/kernel/src/syscall/fs/
+    status: partial
+    semantic_class: fd_lifecycle
+    boundary_profiles:
+      - bad_fd
+    core_modes:
+      - smp1
+    linux_refs:
+      - man 2 close
+    tests:
+      - test-suit/starryos/probes/contract/close_badfd.c
+    risk_tags:
+      - errno_mismatch
+    generator_hints:
+      template: contract_errno
+
+  - syscall: dup
+    domain: fs
+    dispatch_path: os/StarryOS/kernel/src/syscall/mod.rs
+    impl_path: os/StarryOS/kernel/src/syscall/fs/
+    status: partial
+    semantic_class: fd_lifecycle
+    boundary_profiles:
+      - bad_fd
+    core_modes:
+      - smp1
+    linux_refs:
+      - man 2 dup
+    tests:
+      - test-suit/starryos/probes/contract/dup_badfd.c
+    risk_tags:
+      - errno_mismatch
+    generator_hints:
+      template: contract_errno
+
+  - syscall: read
+    domain: fs
+    dispatch_path: os/StarryOS/kernel/src/syscall/mod.rs
+    impl_path: os/StarryOS/kernel/src/syscall/fs/
+    status: partial
+    semantic_class: local_io
+    boundary_profiles:
+      - zero_count_stdin
+    core_modes:
+      - smp1
+    linux_refs:
+      - man 2 read
+    tests:
+      - test-suit/starryos/probes/contract/read_stdin_zero.c
+    risk_tags:
+      - errno_mismatch
+      - user_buffer
+    generator_hints:
+      template: contract_read_zero
+
+  - syscall: write
+    domain: fs
+    dispatch_path: os/StarryOS/kernel/src/syscall/mod.rs
+    impl_path: os/StarryOS/kernel/src/syscall/fs/
+    status: partial
+    semantic_class: local_io
+    boundary_profiles:
+      - iov_len_zero
+    core_modes:
+      - smp1
+    linux_refs:
+      - man 2 write
+    tests:
+      - test-suit/starryos/probes/contract/write_stdout.c
+    risk_tags:
+      - errno_mismatch
+      - user_buffer
+    generator_hints:
+      template: contract_write_zero
+
+  - syscall: futex
+    domain: sync
+    dispatch_path: os/StarryOS/kernel/src/syscall/mod.rs
+    impl_path: os/StarryOS/kernel/src/syscall/sync/futex.rs
+    status: partial
+    semantic_class: sync
+    boundary_profiles:
+      - wait_wake
+      - timeout
+    core_modes:
+      - smp1
+      - smp2
+    linux_refs:
+      - man 2 futex
+    tests: []
+    risk_tags:
+      - blocking_signal
+      - smp_race
+      - cross_core_wakeup
+    generator_hints:
+      template: contract_stub
+
+  - syscall: ppoll
+    domain: io_mpx
+    dispatch_path: os/StarryOS/kernel/src/syscall/mod.rs
+    impl_path: os/StarryOS/kernel/src/syscall/io_mpx/poll.rs
+    status: partial
+    semantic_class: io_wait
+    boundary_profiles:
+      - timeout
+      - sigmask
+    core_modes:
+      - smp1
+      - smp2
+    linux_refs:
+      - man 2 ppoll
+    tests: []
+    risk_tags:
+      - blocking_signal
+      - errno_mismatch
+    generator_hints:
+      template: contract_stub

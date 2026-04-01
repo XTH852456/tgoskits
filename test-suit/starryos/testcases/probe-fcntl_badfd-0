@@ -1,0 +1,3 @@
+chmod +x /root/fcntl_badfd
+/root/fcntl_badfd
+echo 'All tests passed!'

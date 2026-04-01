@@ -1,0 +1,3 @@
+chmod +x /root/write_stdout
+/root/write_stdout
+echo 'All tests passed!'

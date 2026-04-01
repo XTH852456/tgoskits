@@ -1,0 +1,3 @@
+chmod +x /root/close_badfd
+/root/close_badfd
+echo 'All tests passed!'

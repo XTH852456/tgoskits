@@ -1,0 +1,1 @@
+CASE write_stdout.zero_len ret=0 errno=0 note=handwritten

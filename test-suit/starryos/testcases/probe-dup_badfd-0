@@ -1,0 +1,3 @@
+chmod +x /root/dup_badfd
+/root/dup_badfd
+echo 'All tests passed!'

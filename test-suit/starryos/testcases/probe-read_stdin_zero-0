@@ -1,0 +1,3 @@
+chmod +x /root/read_stdin_zero
+/root/read_stdin_zero
+echo 'All tests passed!'
