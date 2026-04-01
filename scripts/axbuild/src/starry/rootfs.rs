@@ -118,9 +118,26 @@ pub(crate) async fn prepare_test_qemu_config(
     request: &ResolvedStarryRequest,
     template_path: &Path,
     timeout_override: Option<u64>,
+    base_disk_image: Option<&Path>,
 ) -> anyhow::Result<PathBuf> {
-    let base_disk_img =
-        ensure_rootfs_in_target_dir(workspace_root, &request.arch, &request.target).await?;
+    let base_disk_img = match base_disk_image {
+        Some(p) => {
+            let p = if p.is_absolute() {
+                p.to_path_buf()
+            } else {
+                workspace_root.join(p)
+            };
+            if !p.is_file() {
+                bail!(
+                    "test base disk image not found: {} (use `cargo xtask starry rootfs` first, \
+                     or run the probe inject script)",
+                    p.display()
+                );
+            }
+            p
+        }
+        None => ensure_rootfs_in_target_dir(workspace_root, &request.arch, &request.target).await?,
+    };
     let isolated_disk_img = isolated_test_disk_image_path(workspace_root, request)?;
     tokio_fs::copy(&base_disk_img, &isolated_disk_img)
         .await
@@ -327,7 +344,7 @@ shell_prefix = "starry:~#"
             uboot_config: None,
         };
 
-        let generated = prepare_test_qemu_config(root.path(), &request, &template, None)
+        let generated = prepare_test_qemu_config(root.path(), &request, &template, None, None)
             .await
             .unwrap();
         let content = fs::read_to_string(generated).unwrap();
@@ -335,6 +352,98 @@ shell_prefix = "starry:~#"
         assert!(content.contains("disk-test-"));
         assert!(!content.contains("${workspace}/target/x86_64-unknown-none/rootfs-x86_64.img"));
         assert!(content.contains("shell_prefix = \"starry:~#\""));
+    }
+
+    #[tokio::test]
+    async fn prepare_test_qemu_config_copies_from_custom_base_disk_image() {
+        let root = tempdir().unwrap();
+        let target_dir = root.path().join("target/x86_64-unknown-none");
+        fs::create_dir_all(&target_dir).unwrap();
+        fs::write(target_dir.join("rootfs-x86_64.img"), b"default-rootfs").unwrap();
+        fs::write(root.path().join("probe-rootfs.img"), b"probe-bytes").unwrap();
+
+        let template = root.path().join("qemu-x86_64.toml");
+        fs::write(
+            &template,
+            r#"
+args = ["-nographic", "-drive", "id=disk0,if=none,format=raw,file=${workspace}/target/x86_64-unknown-none/rootfs-x86_64.img"]
+shell_prefix = "starry:~#"
+"#,
+        )
+        .unwrap();
+
+        let request = ResolvedStarryRequest {
+            package: "starryos-test".to_string(),
+            arch: "x86_64".to_string(),
+            target: "x86_64-unknown-none".to_string(),
+            plat_dyn: None,
+            build_info_path: PathBuf::from("/tmp/.build.toml"),
+            qemu_config: None,
+            uboot_config: None,
+        };
+
+        let generated = prepare_test_qemu_config(
+            root.path(),
+            &request,
+            &template,
+            None,
+            Some(Path::new("probe-rootfs.img")),
+        )
+        .await
+        .unwrap();
+        let content = fs::read_to_string(generated).unwrap();
+        let isolated_line = content
+            .lines()
+            .find(|l| l.contains("disk-test-") && l.contains(".img"))
+            .expect("isolated disk path in generated config");
+        let isolated_path = isolated_line
+            .rsplit_once("file=")
+            .expect("drive file= in args")
+            .1
+            .trim_end_matches(|c: char| c == '"' || c == ']');
+        assert_eq!(fs::read(isolated_path).unwrap(), b"probe-bytes");
+    }
+
+    #[tokio::test]
+    async fn prepare_test_qemu_config_errors_when_custom_base_disk_missing() {
+        let root = tempdir().unwrap();
+        let target_dir = root.path().join("target/x86_64-unknown-none");
+        fs::create_dir_all(&target_dir).unwrap();
+        fs::write(target_dir.join("rootfs-x86_64.img"), b"rootfs").unwrap();
+
+        let template = root.path().join("qemu-x86_64.toml");
+        fs::write(
+            &template,
+            r#"
+args = ["-nographic", "-drive", "id=disk0,if=none,format=raw,file=${workspace}/target/x86_64-unknown-none/rootfs-x86_64.img"]
+"#,
+        )
+        .unwrap();
+
+        let request = ResolvedStarryRequest {
+            package: "starryos-test".to_string(),
+            arch: "x86_64".to_string(),
+            target: "x86_64-unknown-none".to_string(),
+            plat_dyn: None,
+            build_info_path: PathBuf::from("/tmp/.build.toml"),
+            qemu_config: None,
+            uboot_config: None,
+        };
+
+        let err = prepare_test_qemu_config(
+            root.path(),
+            &request,
+            &template,
+            None,
+            Some(Path::new("missing-probe.img")),
+        )
+        .await
+        .unwrap_err();
+        let msg = format!("{err:#}");
+        assert!(
+            msg.contains("test base disk image not found"),
+            "unexpected error: {msg}"
+        );
     }
 
     #[test]

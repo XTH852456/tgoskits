@@ -91,6 +91,9 @@ pub struct ArgsTestQemu {
     pub target: String,
     #[arg(long, value_name = "CMD_OR_FILE")]
     pub shell_init_cmd: Option<String>,
+    /// Ext4 rootfs used as the source for the ephemeral test disk copy (default: downloaded `rootfs-<arch>.img`).
+    #[arg(long, value_name = "PATH")]
+    pub test_disk_image: Option<PathBuf>,
     #[arg(
         long,
         value_name = "SECONDS",
@@ -221,6 +224,7 @@ impl Starry {
             &request,
             &self.test_qemu_config_path(arch),
             args.timeout,
+            args.test_disk_image.as_deref(),
         )
         .await?;
 
@@ -432,6 +436,42 @@ mod tests {
                     assert_eq!(args.target, "x86_64");
                     assert_eq!(args.shell_init_cmd, Some("echo 'test'".to_string()));
                     assert_eq!(args.timeout, Some(10));
+                }
+                _ => panic!("expected qemu test command"),
+            },
+            _ => panic!("expected test command"),
+        }
+    }
+
+    #[test]
+    fn command_parses_test_qemu_with_test_disk_image() {
+        #[derive(Parser)]
+        struct Cli {
+            #[command(subcommand)]
+            command: Command,
+        }
+
+        let cli = Cli::try_parse_from([
+            "starry",
+            "test",
+            "qemu",
+            "--target",
+            "riscv64",
+            "--test-disk-image",
+            "target/riscv64gc-unknown-none-elf/rootfs-riscv64-probe.img",
+        ])
+        .unwrap();
+
+        match cli.command {
+            Command::Test(args) => match args.command {
+                TestCommand::Qemu(args) => {
+                    assert_eq!(args.target, "riscv64");
+                    assert_eq!(
+                        args.test_disk_image,
+                        Some(PathBuf::from(
+                            "target/riscv64gc-unknown-none-elf/rootfs-riscv64-probe.img"
+                        ))
+                    );
                 }
                 _ => panic!("expected qemu test command"),
             },
