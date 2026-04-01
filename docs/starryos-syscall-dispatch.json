@@ -1,0 +1,1108 @@
+{
+  "source": "os/StarryOS/kernel/src/syscall/mod.rs",
+  "count": 210,
+  "syscalls": [
+    {
+      "syscall": "ioctl",
+      "section_comment": "fs ctl",
+      "cfgs": []
+    },
+    {
+      "syscall": "chdir",
+      "section_comment": "fs ctl",
+      "cfgs": []
+    },
+    {
+      "syscall": "fchdir",
+      "section_comment": "fs ctl",
+      "cfgs": []
+    },
+    {
+      "syscall": "chroot",
+      "section_comment": "fs ctl",
+      "cfgs": []
+    },
+    {
+      "syscall": "mkdir",
+      "section_comment": "fs ctl",
+      "cfgs": [
+        "#[cfg(target_arch = \"x86_64\")]"
+      ]
+    },
+    {
+      "syscall": "mkdirat",
+      "section_comment": "fs ctl",
+      "cfgs": []
+    },
+    {
+      "syscall": "getdents64",
+      "section_comment": "fs ctl",
+      "cfgs": []
+    },
+    {
+      "syscall": "link",
+      "section_comment": "fs ctl",
+      "cfgs": [
+        "#[cfg(target_arch = \"x86_64\")]"
+      ]
+    },
+    {
+      "syscall": "linkat",
+      "section_comment": "fs ctl",
+      "cfgs": []
+    },
+    {
+      "syscall": "rmdir",
+      "section_comment": "fs ctl",
+      "cfgs": [
+        "#[cfg(target_arch = \"x86_64\")]"
+      ]
+    },
+    {
+      "syscall": "unlink",
+      "section_comment": "fs ctl",
+      "cfgs": [
+        "#[cfg(target_arch = \"x86_64\")]"
+      ]
+    },
+    {
+      "syscall": "unlinkat",
+      "section_comment": "fs ctl",
+      "cfgs": []
+    },
+    {
+      "syscall": "getcwd",
+      "section_comment": "fs ctl",
+      "cfgs": []
+    },
+    {
+      "syscall": "symlink",
+      "section_comment": "fs ctl",
+      "cfgs": [
+        "#[cfg(target_arch = \"x86_64\")]"
+      ]
+    },
+    {
+      "syscall": "symlinkat",
+      "section_comment": "fs ctl",
+      "cfgs": []
+    },
+    {
+      "syscall": "rename",
+      "section_comment": "fs ctl",
+      "cfgs": [
+        "#[cfg(target_arch = \"x86_64\")]"
+      ]
+    },
+    {
+      "syscall": "renameat",
+      "section_comment": "fs ctl",
+      "cfgs": [
+        "#[cfg(not(target_arch = \"riscv64\"))]"
+      ]
+    },
+    {
+      "syscall": "renameat2",
+      "section_comment": "fs ctl",
+      "cfgs": []
+    },
+    {
+      "syscall": "sync",
+      "section_comment": "fs ctl",
+      "cfgs": []
+    },
+    {
+      "syscall": "syncfs",
+      "section_comment": "fs ctl",
+      "cfgs": []
+    },
+    {
+      "syscall": "chown",
+      "section_comment": "file ops",
+      "cfgs": [
+        "#[cfg(target_arch = \"x86_64\")]"
+      ]
+    },
+    {
+      "syscall": "lchown",
+      "section_comment": "file ops",
+      "cfgs": [
+        "#[cfg(target_arch = \"x86_64\")]"
+      ]
+    },
+    {
+      "syscall": "fchown",
+      "section_comment": "file ops",
+      "cfgs": []
+    },
+    {
+      "syscall": "fchownat",
+      "section_comment": "file ops",
+      "cfgs": []
+    },
+    {
+      "syscall": "chmod",
+      "section_comment": "file ops",
+      "cfgs": [
+        "#[cfg(target_arch = \"x86_64\")]"
+      ]
+    },
+    {
+      "syscall": "fchmod",
+      "section_comment": "file ops",
+      "cfgs": []
+    },
+    {
+      "syscall": "fchmodat",
+      "section_comment": "file ops",
+      "cfgs": []
+    },
+    {
+      "syscall": "fchmodat2",
+      "section_comment": "file ops",
+      "cfgs": []
+    },
+    {
+      "syscall": "readlink",
+      "section_comment": "file ops",
+      "cfgs": [
+        "#[cfg(target_arch = \"x86_64\")]"
+      ]
+    },
+    {
+      "syscall": "readlinkat",
+      "section_comment": "file ops",
+      "cfgs": []
+    },
+    {
+      "syscall": "utime",
+      "section_comment": "file ops",
+      "cfgs": [
+        "#[cfg(target_arch = \"x86_64\")]"
+      ]
+    },
+    {
+      "syscall": "utimes",
+      "section_comment": "file ops",
+      "cfgs": [
+        "#[cfg(target_arch = \"x86_64\")]"
+      ]
+    },
+    {
+      "syscall": "utimensat",
+      "section_comment": "file ops",
+      "cfgs": []
+    },
+    {
+      "syscall": "open",
+      "section_comment": "fd ops",
+      "cfgs": [
+        "#[cfg(target_arch = \"x86_64\")]"
+      ]
+    },
+    {
+      "syscall": "openat",
+      "section_comment": "fd ops",
+      "cfgs": []
+    },
+    {
+      "syscall": "close",
+      "section_comment": "fd ops",
+      "cfgs": []
+    },
+    {
+      "syscall": "close_range",
+      "section_comment": "fd ops",
+      "cfgs": []
+    },
+    {
+      "syscall": "dup",
+      "section_comment": "fd ops",
+      "cfgs": []
+    },
+    {
+      "syscall": "dup2",
+      "section_comment": "fd ops",
+      "cfgs": [
+        "#[cfg(target_arch = \"x86_64\")]"
+      ]
+    },
+    {
+      "syscall": "dup3",
+      "section_comment": "fd ops",
+      "cfgs": []
+    },
+    {
+      "syscall": "fcntl",
+      "section_comment": "fd ops",
+      "cfgs": []
+    },
+    {
+      "syscall": "flock",
+      "section_comment": "fd ops",
+      "cfgs": []
+    },
+    {
+      "syscall": "read",
+      "section_comment": "io",
+      "cfgs": []
+    },
+    {
+      "syscall": "readv",
+      "section_comment": "io",
+      "cfgs": []
+    },
+    {
+      "syscall": "write",
+      "section_comment": "io",
+      "cfgs": []
+    },
+    {
+      "syscall": "writev",
+      "section_comment": "io",
+      "cfgs": []
+    },
+    {
+      "syscall": "lseek",
+      "section_comment": "io",
+      "cfgs": []
+    },
+    {
+      "syscall": "truncate",
+      "section_comment": "io",
+      "cfgs": []
+    },
+    {
+      "syscall": "ftruncate",
+      "section_comment": "io",
+      "cfgs": []
+    },
+    {
+      "syscall": "fallocate",
+      "section_comment": "io",
+      "cfgs": []
+    },
+    {
+      "syscall": "fsync",
+      "section_comment": "io",
+      "cfgs": []
+    },
+    {
+      "syscall": "fdatasync",
+      "section_comment": "io",
+      "cfgs": []
+    },
+    {
+      "syscall": "fadvise64",
+      "section_comment": "io",
+      "cfgs": []
+    },
+    {
+      "syscall": "pread64",
+      "section_comment": "io",
+      "cfgs": []
+    },
+    {
+      "syscall": "pwrite64",
+      "section_comment": "io",
+      "cfgs": []
+    },
+    {
+      "syscall": "preadv",
+      "section_comment": "io",
+      "cfgs": []
+    },
+    {
+      "syscall": "pwritev",
+      "section_comment": "io",
+      "cfgs": []
+    },
+    {
+      "syscall": "preadv2",
+      "section_comment": "io",
+      "cfgs": []
+    },
+    {
+      "syscall": "pwritev2",
+      "section_comment": "io",
+      "cfgs": []
+    },
+    {
+      "syscall": "sendfile",
+      "section_comment": "io",
+      "cfgs": []
+    },
+    {
+      "syscall": "copy_file_range",
+      "section_comment": "io",
+      "cfgs": []
+    },
+    {
+      "syscall": "splice",
+      "section_comment": "io",
+      "cfgs": []
+    },
+    {
+      "syscall": "poll",
+      "section_comment": "io mpx",
+      "cfgs": [
+        "#[cfg(target_arch = \"x86_64\")]"
+      ]
+    },
+    {
+      "syscall": "ppoll",
+      "section_comment": "io mpx",
+      "cfgs": []
+    },
+    {
+      "syscall": "select",
+      "section_comment": "io mpx",
+      "cfgs": [
+        "#[cfg(target_arch = \"x86_64\")]"
+      ]
+    },
+    {
+      "syscall": "pselect6",
+      "section_comment": "io mpx",
+      "cfgs": []
+    },
+    {
+      "syscall": "epoll_create1",
+      "section_comment": "io mpx",
+      "cfgs": []
+    },
+    {
+      "syscall": "epoll_ctl",
+      "section_comment": "io mpx",
+      "cfgs": []
+    },
+    {
+      "syscall": "epoll_pwait",
+      "section_comment": "io mpx",
+      "cfgs": []
+    },
+    {
+      "syscall": "epoll_pwait2",
+      "section_comment": "io mpx",
+      "cfgs": []
+    },
+    {
+      "syscall": "mount",
+      "section_comment": "fs mount",
+      "cfgs": []
+    },
+    {
+      "syscall": "umount2",
+      "section_comment": "fs mount",
+      "cfgs": []
+    },
+    {
+      "syscall": "pipe2",
+      "section_comment": "pipe",
+      "cfgs": []
+    },
+    {
+      "syscall": "pipe",
+      "section_comment": "pipe",
+      "cfgs": [
+        "#[cfg(target_arch = \"x86_64\")]"
+      ]
+    },
+    {
+      "syscall": "eventfd2",
+      "section_comment": "event",
+      "cfgs": []
+    },
+    {
+      "syscall": "pidfd_open",
+      "section_comment": "pidfd",
+      "cfgs": []
+    },
+    {
+      "syscall": "pidfd_getfd",
+      "section_comment": "pidfd",
+      "cfgs": []
+    },
+    {
+      "syscall": "pidfd_send_signal",
+      "section_comment": "pidfd",
+      "cfgs": []
+    },
+    {
+      "syscall": "memfd_create",
+      "section_comment": "memfd",
+      "cfgs": []
+    },
+    {
+      "syscall": "stat",
+      "section_comment": "fs stat",
+      "cfgs": [
+        "#[cfg(target_arch = \"x86_64\")]"
+      ]
+    },
+    {
+      "syscall": "fstat",
+      "section_comment": "fs stat",
+      "cfgs": []
+    },
+    {
+      "syscall": "lstat",
+      "section_comment": "fs stat",
+      "cfgs": [
+        "#[cfg(target_arch = \"x86_64\")]"
+      ]
+    },
+    {
+      "syscall": "newfstatat",
+      "section_comment": "fs stat",
+      "cfgs": [
+        "#[cfg(any(target_arch = \"x86_64\", target_arch = \"riscv64\"))]"
+      ]
+    },
+    {
+      "syscall": "fstatat",
+      "section_comment": "fs stat",
+      "cfgs": [
+        "#[cfg(not(any(target_arch = \"x86_64\", target_arch = \"riscv64\")))]"
+      ]
+    },
+    {
+      "syscall": "statx",
+      "section_comment": "fs stat",
+      "cfgs": []
+    },
+    {
+      "syscall": "access",
+      "section_comment": "fs stat",
+      "cfgs": [
+        "#[cfg(target_arch = \"x86_64\")]"
+      ]
+    },
+    {
+      "syscall": "faccessat",
+      "section_comment": "fs stat",
+      "cfgs": []
+    },
+    {
+      "syscall": "faccessat2",
+      "section_comment": "fs stat",
+      "cfgs": []
+    },
+    {
+      "syscall": "statfs",
+      "section_comment": "fs stat",
+      "cfgs": []
+    },
+    {
+      "syscall": "fstatfs",
+      "section_comment": "fs stat",
+      "cfgs": []
+    },
+    {
+      "syscall": "brk",
+      "section_comment": "mm",
+      "cfgs": []
+    },
+    {
+      "syscall": "mmap",
+      "section_comment": "mm",
+      "cfgs": []
+    },
+    {
+      "syscall": "munmap",
+      "section_comment": "mm",
+      "cfgs": []
+    },
+    {
+      "syscall": "mprotect",
+      "section_comment": "mm",
+      "cfgs": []
+    },
+    {
+      "syscall": "mincore",
+      "section_comment": "mm",
+      "cfgs": []
+    },
+    {
+      "syscall": "mremap",
+      "section_comment": "mm",
+      "cfgs": []
+    },
+    {
+      "syscall": "madvise",
+      "section_comment": "mm",
+      "cfgs": []
+    },
+    {
+      "syscall": "msync",
+      "section_comment": "mm",
+      "cfgs": []
+    },
+    {
+      "syscall": "mlock",
+      "section_comment": "mm",
+      "cfgs": []
+    },
+    {
+      "syscall": "mlock2",
+      "section_comment": "mm",
+      "cfgs": []
+    },
+    {
+      "syscall": "getpid",
+      "section_comment": "task info",
+      "cfgs": []
+    },
+    {
+      "syscall": "getppid",
+      "section_comment": "task info",
+      "cfgs": []
+    },
+    {
+      "syscall": "gettid",
+      "section_comment": "task info",
+      "cfgs": []
+    },
+    {
+      "syscall": "getrusage",
+      "section_comment": "task info",
+      "cfgs": []
+    },
+    {
+      "syscall": "sched_yield",
+      "section_comment": "task sched",
+      "cfgs": []
+    },
+    {
+      "syscall": "nanosleep",
+      "section_comment": "task sched",
+      "cfgs": []
+    },
+    {
+      "syscall": "clock_nanosleep",
+      "section_comment": "task sched",
+      "cfgs": []
+    },
+    {
+      "syscall": "sched_getaffinity",
+      "section_comment": "task sched",
+      "cfgs": []
+    },
+    {
+      "syscall": "sched_setaffinity",
+      "section_comment": "task sched",
+      "cfgs": []
+    },
+    {
+      "syscall": "sched_getscheduler",
+      "section_comment": "task sched",
+      "cfgs": []
+    },
+    {
+      "syscall": "sched_setscheduler",
+      "section_comment": "task sched",
+      "cfgs": []
+    },
+    {
+      "syscall": "sched_getparam",
+      "section_comment": "task sched",
+      "cfgs": []
+    },
+    {
+      "syscall": "getpriority",
+      "section_comment": "task sched",
+      "cfgs": []
+    },
+    {
+      "syscall": "execve",
+      "section_comment": "task ops",
+      "cfgs": []
+    },
+    {
+      "syscall": "set_tid_address",
+      "section_comment": "task ops",
+      "cfgs": []
+    },
+    {
+      "syscall": "arch_prctl",
+      "section_comment": "task ops",
+      "cfgs": [
+        "#[cfg(target_arch = \"x86_64\")]"
+      ]
+    },
+    {
+      "syscall": "prctl",
+      "section_comment": "task ops",
+      "cfgs": []
+    },
+    {
+      "syscall": "prlimit64",
+      "section_comment": "task ops",
+      "cfgs": []
+    },
+    {
+      "syscall": "capget",
+      "section_comment": "task ops",
+      "cfgs": []
+    },
+    {
+      "syscall": "capset",
+      "section_comment": "task ops",
+      "cfgs": []
+    },
+    {
+      "syscall": "umask",
+      "section_comment": "task ops",
+      "cfgs": []
+    },
+    {
+      "syscall": "setreuid",
+      "section_comment": "task ops",
+      "cfgs": []
+    },
+    {
+      "syscall": "setresuid",
+      "section_comment": "task ops",
+      "cfgs": []
+    },
+    {
+      "syscall": "setresgid",
+      "section_comment": "task ops",
+      "cfgs": []
+    },
+    {
+      "syscall": "get_mempolicy",
+      "section_comment": "task ops",
+      "cfgs": []
+    },
+    {
+      "syscall": "clone",
+      "section_comment": "task management",
+      "cfgs": []
+    },
+    {
+      "syscall": "clone3",
+      "section_comment": "task management",
+      "cfgs": []
+    },
+    {
+      "syscall": "fork",
+      "section_comment": "task management",
+      "cfgs": [
+        "#[cfg(target_arch = \"x86_64\")]"
+      ]
+    },
+    {
+      "syscall": "exit",
+      "section_comment": "task management",
+      "cfgs": []
+    },
+    {
+      "syscall": "exit_group",
+      "section_comment": "task management",
+      "cfgs": []
+    },
+    {
+      "syscall": "wait4",
+      "section_comment": "task management",
+      "cfgs": []
+    },
+    {
+      "syscall": "getsid",
+      "section_comment": "task management",
+      "cfgs": []
+    },
+    {
+      "syscall": "setsid",
+      "section_comment": "task management",
+      "cfgs": []
+    },
+    {
+      "syscall": "getpgid",
+      "section_comment": "task management",
+      "cfgs": []
+    },
+    {
+      "syscall": "setpgid",
+      "section_comment": "task management",
+      "cfgs": []
+    },
+    {
+      "syscall": "rt_sigprocmask",
+      "section_comment": "signal",
+      "cfgs": []
+    },
+    {
+      "syscall": "rt_sigaction",
+      "section_comment": "signal",
+      "cfgs": []
+    },
+    {
+      "syscall": "rt_sigpending",
+      "section_comment": "signal",
+      "cfgs": []
+    },
+    {
+      "syscall": "rt_sigreturn",
+      "section_comment": "signal",
+      "cfgs": []
+    },
+    {
+      "syscall": "rt_sigtimedwait",
+      "section_comment": "signal",
+      "cfgs": []
+    },
+    {
+      "syscall": "rt_sigsuspend",
+      "section_comment": "signal",
+      "cfgs": []
+    },
+    {
+      "syscall": "kill",
+      "section_comment": "signal",
+      "cfgs": []
+    },
+    {
+      "syscall": "tkill",
+      "section_comment": "signal",
+      "cfgs": []
+    },
+    {
+      "syscall": "tgkill",
+      "section_comment": "signal",
+      "cfgs": []
+    },
+    {
+      "syscall": "rt_sigqueueinfo",
+      "section_comment": "signal",
+      "cfgs": []
+    },
+    {
+      "syscall": "rt_tgsigqueueinfo",
+      "section_comment": "signal",
+      "cfgs": []
+    },
+    {
+      "syscall": "sigaltstack",
+      "section_comment": "signal",
+      "cfgs": []
+    },
+    {
+      "syscall": "futex",
+      "section_comment": "signal",
+      "cfgs": []
+    },
+    {
+      "syscall": "get_robust_list",
+      "section_comment": "signal",
+      "cfgs": []
+    },
+    {
+      "syscall": "set_robust_list",
+      "section_comment": "signal",
+      "cfgs": []
+    },
+    {
+      "syscall": "getuid",
+      "section_comment": "sys",
+      "cfgs": []
+    },
+    {
+      "syscall": "geteuid",
+      "section_comment": "sys",
+      "cfgs": []
+    },
+    {
+      "syscall": "getgid",
+      "section_comment": "sys",
+      "cfgs": []
+    },
+    {
+      "syscall": "getegid",
+      "section_comment": "sys",
+      "cfgs": []
+    },
+    {
+      "syscall": "setuid",
+      "section_comment": "sys",
+      "cfgs": []
+    },
+    {
+      "syscall": "setgid",
+      "section_comment": "sys",
+      "cfgs": []
+    },
+    {
+      "syscall": "getgroups",
+      "section_comment": "sys",
+      "cfgs": []
+    },
+    {
+      "syscall": "setgroups",
+      "section_comment": "sys",
+      "cfgs": []
+    },
+    {
+      "syscall": "uname",
+      "section_comment": "sys",
+      "cfgs": []
+    },
+    {
+      "syscall": "sysinfo",
+      "section_comment": "sys",
+      "cfgs": []
+    },
+    {
+      "syscall": "syslog",
+      "section_comment": "sys",
+      "cfgs": []
+    },
+    {
+      "syscall": "getrandom",
+      "section_comment": "sys",
+      "cfgs": []
+    },
+    {
+      "syscall": "seccomp",
+      "section_comment": "sys",
+      "cfgs": []
+    },
+    {
+      "syscall": "riscv_flush_icache",
+      "section_comment": "sys",
+      "cfgs": [
+        "#[cfg(target_arch = \"riscv64\")]"
+      ]
+    },
+    {
+      "syscall": "membarrier",
+      "section_comment": "sync",
+      "cfgs": []
+    },
+    {
+      "syscall": "gettimeofday",
+      "section_comment": "time",
+      "cfgs": []
+    },
+    {
+      "syscall": "times",
+      "section_comment": "time",
+      "cfgs": []
+    },
+    {
+      "syscall": "clock_gettime",
+      "section_comment": "time",
+      "cfgs": []
+    },
+    {
+      "syscall": "clock_getres",
+      "section_comment": "time",
+      "cfgs": []
+    },
+    {
+      "syscall": "getitimer",
+      "section_comment": "time",
+      "cfgs": []
+    },
+    {
+      "syscall": "setitimer",
+      "section_comment": "time",
+      "cfgs": []
+    },
+    {
+      "syscall": "msgget",
+      "section_comment": "msg",
+      "cfgs": []
+    },
+    {
+      "syscall": "msgsnd",
+      "section_comment": "msg",
+      "cfgs": []
+    },
+    {
+      "syscall": "msgrcv",
+      "section_comment": "msg",
+      "cfgs": []
+    },
+    {
+      "syscall": "msgctl",
+      "section_comment": "msg",
+      "cfgs": []
+    },
+    {
+      "syscall": "shmget",
+      "section_comment": "shm",
+      "cfgs": []
+    },
+    {
+      "syscall": "shmat",
+      "section_comment": "shm",
+      "cfgs": []
+    },
+    {
+      "syscall": "shmctl",
+      "section_comment": "shm",
+      "cfgs": []
+    },
+    {
+      "syscall": "shmdt",
+      "section_comment": "shm",
+      "cfgs": []
+    },
+    {
+      "syscall": "socket",
+      "section_comment": "net",
+      "cfgs": []
+    },
+    {
+      "syscall": "socketpair",
+      "section_comment": "net",
+      "cfgs": []
+    },
+    {
+      "syscall": "bind",
+      "section_comment": "net",
+      "cfgs": []
+    },
+    {
+      "syscall": "connect",
+      "section_comment": "net",
+      "cfgs": []
+    },
+    {
+      "syscall": "getsockname",
+      "section_comment": "net",
+      "cfgs": []
+    },
+    {
+      "syscall": "getpeername",
+      "section_comment": "net",
+      "cfgs": []
+    },
+    {
+      "syscall": "listen",
+      "section_comment": "net",
+      "cfgs": []
+    },
+    {
+      "syscall": "accept",
+      "section_comment": "net",
+      "cfgs": []
+    },
+    {
+      "syscall": "accept4",
+      "section_comment": "net",
+      "cfgs": []
+    },
+    {
+      "syscall": "shutdown",
+      "section_comment": "net",
+      "cfgs": []
+    },
+    {
+      "syscall": "sendto",
+      "section_comment": "net",
+      "cfgs": []
+    },
+    {
+      "syscall": "recvfrom",
+      "section_comment": "net",
+      "cfgs": []
+    },
+    {
+      "syscall": "sendmsg",
+      "section_comment": "net",
+      "cfgs": []
+    },
+    {
+      "syscall": "recvmsg",
+      "section_comment": "net",
+      "cfgs": []
+    },
+    {
+      "syscall": "getsockopt",
+      "section_comment": "net",
+      "cfgs": []
+    },
+    {
+      "syscall": "setsockopt",
+      "section_comment": "net",
+      "cfgs": []
+    },
+    {
+      "syscall": "signalfd4",
+      "section_comment": "signal file descriptors",
+      "cfgs": []
+    },
+    {
+      "syscall": "timerfd_create",
+      "section_comment": "dummy fds",
+      "cfgs": []
+    },
+    {
+      "syscall": "fanotify_init",
+      "section_comment": "dummy fds",
+      "cfgs": []
+    },
+    {
+      "syscall": "inotify_init1",
+      "section_comment": "dummy fds",
+      "cfgs": []
+    },
+    {
+      "syscall": "userfaultfd",
+      "section_comment": "dummy fds",
+      "cfgs": []
+    },
+    {
+      "syscall": "perf_event_open",
+      "section_comment": "dummy fds",
+      "cfgs": []
+    },
+    {
+      "syscall": "io_uring_setup",
+      "section_comment": "dummy fds",
+      "cfgs": []
+    },
+    {
+      "syscall": "bpf",
+      "section_comment": "dummy fds",
+      "cfgs": []
+    },
+    {
+      "syscall": "fsopen",
+      "section_comment": "dummy fds",
+      "cfgs": []
+    },
+    {
+      "syscall": "fspick",
+      "section_comment": "dummy fds",
+      "cfgs": []
+    },
+    {
+      "syscall": "open_tree",
+      "section_comment": "dummy fds",
+      "cfgs": []
+    },
+    {
+      "syscall": "memfd_secret",
+      "section_comment": "dummy fds",
+      "cfgs": []
+    },
+    {
+      "syscall": "timer_create",
+      "section_comment": "dummy fds",
+      "cfgs": []
+    },
+    {
+      "syscall": "timer_gettime",
+      "section_comment": "dummy fds",
+      "cfgs": []
+    },
+    {
+      "syscall": "timer_settime",
+      "section_comment": "dummy fds",
+      "cfgs": []
+    }
+  ]
+}
