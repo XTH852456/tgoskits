@@ -25,7 +25,16 @@ jobs:
 
       - name: Document guest oracle usage
         run: |
-          echo "Local: export STARRY_LINUX_GUEST_IMAGE=/path/to/riscv64/Image"
+          echo "Anchor: docs/starryos-linux-guest-oracle-pin.md"
+          echo "One-shot (build probes + smoke + verify write_stdout):"
+          echo "  ./scripts/verify_linux_guest_oracle.sh -i /path/to/riscv64/Image"
+          echo "  ./scripts/verify_linux_guest_oracle.sh -a   # also verify-oracle-all"
+          echo "Manual:"
+          echo "  export STARRY_LINUX_GUEST_IMAGE=/path/to/riscv64/Image"
+          echo "  export STARRY_LINUX_GUEST_CC=riscv64-linux-musl-gcc  # stub compile; match build-probes CC"
+          echo "  sh test-suit/starryos/scripts/build-probes.sh   # needs -no-pie (see build-probes.sh)"
           echo "  test-suit/starryos/scripts/run-diff-probes.sh oracle-guest write_stdout"
           echo "  VERIFY_ORACLE_TRACK=guest-alpine323 test-suit/starryos/scripts/run-diff-probes.sh verify-oracle-all"
-          echo "Refresh golden: scripts/refresh_guest_oracle_expected.sh"
+          echo "Refresh all guest golden .line files:"
+          echo "  STARRY_LINUX_GUEST_IMAGE=... CC=riscv64-linux-musl-gcc scripts/refresh_guest_oracle_expected.sh"
+          echo "Full guest verify in CI needs caching or building a riscv64 Image (not run in this job by default)."
