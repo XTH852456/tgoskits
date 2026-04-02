@@ -120,7 +120,18 @@ cargo xtask starry test qemu --target riscv64 \
 test-suit/starryos/scripts/verify-guest-log-oracle.sh write_stdout
 
 # 方式 B：先保存日志再验（推荐，可重复执行）
-cargo xtask starry test qemu ... 2>&1 | tee serial.log
+# 在仓库根目录执行。若尚未准备 rootfs / 探针镜像，先跑下面两行（只需在镜像变更后重复）：
+cargo xtask starry rootfs --arch riscv64
+./test-suit/starryos/scripts/prepare-rootfs-with-write_stdout-probe.sh
+
+# 跑 starryos-test，并把终端里的全部输出写入 serial.log（仍可在屏幕上看一遍）
+cargo xtask starry test qemu --target riscv64 \
+  --test-disk-image target/riscv64gc-unknown-none-elf/rootfs-riscv64-probe.img \
+  --shell-init-cmd test-suit/starryos/testcases/probe-write_stdout-0 \
+  --timeout 120 \
+  2>&1 | tee serial.log
+
+# 用保存的日志与 oracle 期望行比对
 test-suit/starryos/scripts/verify-guest-log-oracle.sh write_stdout serial.log
 
 # 方式 C：显式从 stdin（等价于省略第二个参数）

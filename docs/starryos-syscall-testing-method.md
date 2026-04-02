@@ -18,7 +18,7 @@
 - **`run-diff-probes.sh`**：设置 **`VERIFY_STRICT=1`** 时，若缺少 `qemu-riscv64`，`verify-oracle` / `verify-oracle-all` 以退出码 **2** 失败（便于 CI 要求必须跑 oracle）。
 - **`diff-guest-line.sh`**：将串口/日志中的一行 `CASE …` 与 `expected/<probe>.line` 比对。
 - **`run-starry-probe-qemu.sh <probe>`**：依次执行注入镜像与 `cargo xtask starry test qemu`（见 `test-suit/starryos/probes/README.md`）。
-- **`verify-guest-log-oracle.sh <probe> [log|-]`**：从串口/日志取首行 `^CASE `，与 `expected/<probe>.line` 自动比对（**0 / 1 / 2** 退出码）。**可不写第二个参数**，从标准输入读入（粘贴串口全文后 **Ctrl+D**）；或先用 **`tee serial.log`** 保存再验。
+- **`verify-guest-log-oracle.sh <probe> [log|-]`**：从串口/日志取首行 `^CASE `，与 `expected/<probe>.line` 自动比对（**0 / 1 / 2** 退出码）。**可不写第二个参数**，从标准输入读入（粘贴串口全文后 **Ctrl+D**）；或用完整 **`cargo xtask starry test qemu … 2>&1 | tee serial.log`** 留档后再验（完整命令见 **`test-suit/starryos/probes/README.md`**「方式 B」）。
 - **`extract-case-line.sh`** / **`diff-guest-line.sh`**：底层抽取与单行比对。
 - **`scripts/starryos-probes-ci.sh`**：catalog 校验、覆盖检查、shell `sh -n`、可选交叉编译（无需 QEMU）；若仅有 **`riscv64-linux-gnu-gcc`**（如 Ubuntu）也会尝试构建。
 - **`test-suit/starryos/scripts/run-e2e-probe-smoke.sh`**：本地 **rootfs + 注入 + `cargo xtask starry test qemu`** 一键冒烟（默认不跑 CI）。

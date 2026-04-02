@@ -28,8 +28,14 @@ else
     echo "verify-guest-log-oracle: 找不到日志文件: $log_arg" >&2
     echo "" >&2
     echo "可选做法：" >&2
-    echo "  1) 下次跑 QEMU 时先保存输出：" >&2
-    echo "       cargo xtask starry test qemu ... 2>&1 | tee serial.log" >&2
+    echo "  1) 在仓库根目录先准备镜像（按需），再跑 QEMU 并 tee 保存输出，例如 write_stdout：" >&2
+    echo "       cargo xtask starry rootfs --arch riscv64" >&2
+    echo "       ./test-suit/starryos/scripts/prepare-rootfs-with-write_stdout-probe.sh" >&2
+    echo "       cargo xtask starry test qemu --target riscv64 \\" >&2
+    echo "         --test-disk-image target/riscv64gc-unknown-none-elf/rootfs-riscv64-probe.img \\" >&2
+    echo "         --shell-init-cmd test-suit/starryos/testcases/probe-write_stdout-0 \\" >&2
+    echo "         --timeout 120 \\" >&2
+    echo "         2>&1 | tee serial.log" >&2
     echo "       $0 $probe serial.log" >&2
     echo "  2) 不传文件，从标准输入读入（粘贴整段串口文本后按 Ctrl+D 结束）：" >&2
     echo "       $0 $probe" >&2
