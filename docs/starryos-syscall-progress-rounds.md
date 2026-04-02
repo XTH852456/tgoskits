@@ -358,3 +358,13 @@
 **验证**：`extract_starry_syscalls.py --check-catalog`；`verify-oracle-all`；**`run-smp2-guest-matrix.sh`**（含新探针）。
 
 ---
+
+## 第 37 轮 — 分歧登记流程与 CI 校验
+
+**目标**：**`parity: divergent`** 时有固定 **`tracking_issue`** URL；文档说明登记步骤与当前空表。
+
+**交付物**：**`docs/starryos-syscall-compat-divergence.md`**；**`check_compat_matrix.py`** 扩展；矩阵 YAML 头注释；测试方法交叉引用。
+
+**验证**：`./scripts/starryos-probes-ci.sh`（矩阵当前无 divergent 行则仅校验通过）。
+
+---

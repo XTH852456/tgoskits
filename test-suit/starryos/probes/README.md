@@ -201,6 +201,7 @@ python3 scripts/check_probe_coverage.py
 
 - `docs/starryos-syscall-testing-method.md` — 分层与新增 contract 清单
 - `docs/starryos-syscall-compat-matrix.yaml` — Linux 对齐矩阵骨架
+- `docs/starryos-syscall-compat-divergence.md` — **`parity: divergent`** 与 **`tracking_issue`** 登记
 - `docs/starryos-syscall-smp-notes.md` — SMP / 多核占位说明
 - `docs/starryos-syscall-progress-rounds.md` — 多轮迭代纪要
 - `docs/starryos-syscall-commit-strategy.md` — 分组提交建议

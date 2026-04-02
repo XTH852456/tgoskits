@@ -24,6 +24,7 @@
 | QEMU 用例 | `test-suit/starryos/testcases/probe-*-0` | `shell_init_cmd` 多行脚本 |
 | 测试方法 | `docs/starryos-syscall-testing-method.md` | 分层与扩展清单 |
 | 兼容矩阵骨架 | `docs/starryos-syscall-compat-matrix.yaml` | 与 Linux oracle 对齐结论（待填） |
+| 分歧登记 | `docs/starryos-syscall-compat-divergence.md` | `parity: divergent` + `tracking_issue` 流程；CI 由 `check_compat_matrix.py` 校验 |
 | 迭代纪要 | `docs/starryos-syscall-progress-rounds.md` | 多轮交付记录 |
 | 提交策略 | `docs/starryos-syscall-commit-strategy.md` | 分组 commit / PR 建议 |
 | CI 示例 | `docs/starryos-probes-ci-example.md` | GitHub Actions 片段 |
