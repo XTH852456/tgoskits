@@ -1,0 +1,1 @@
+CASE readv.badfd ret=-1 errno=9 note=handwritten

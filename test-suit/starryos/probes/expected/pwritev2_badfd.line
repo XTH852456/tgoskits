@@ -1,0 +1,1 @@
+CASE pwritev2.badfd ret=-1 errno=38 note=handwritten

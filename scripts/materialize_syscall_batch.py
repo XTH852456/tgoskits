@@ -18,10 +18,16 @@ import sys
 import tempfile
 from pathlib import Path
 
+_SCRIPTS_DIR = Path(__file__).resolve().parent
+if str(_SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(_SCRIPTS_DIR))
+
 try:
     import yaml  # type: ignore
 except ImportError:
     yaml = None  # type: ignore
+
+from _materialize_badfd import BADFD_STMT
 
 
 def case_tag(probe: str) -> str:
@@ -249,6 +255,91 @@ def build_source_for_entry(syscall: str, probe: str, pattern: str) -> str | None
     ct = case_tag(probe)
     p = probe_path(syscall)
 
+    # ---- explicit probes (oracle differs from suffix heuristic) ----
+    if probe == "close_range_badfd":
+        body = """
+#include <errno.h>
+#include <stdio.h>
+#include <sys/syscall.h>
+#include <unistd.h>
+int main(void)
+{
+	errno = 0;
+	long r = syscall(SYS_close_range, 0xFFFFFFFFu, 10u, 0);
+	int e = errno;
+	dprintf(1, "CASE close_range.einval ret=%ld errno=%d note=handwritten\\n", r, e);
+	return 0;
+}
+"""
+        return body.strip() + "\n"
+
+    if probe == "open_enoent" and pattern == "special":
+        body = f"""
+#include <errno.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <unistd.h>
+static const char p[] = "{p}";
+int main(void)
+{{
+\terrno = 0;
+\tint r = open(p, O_RDONLY | O_NOCTTY);
+\tint e = errno;
+\tdprintf(1, "CASE {ct} ret=%d errno=%d note=handwritten\\n", r, e);
+\treturn 0;
+}}
+"""
+        return body.strip() + "\n"
+
+    # ---- errno EFAULT / NULL pointer result ----
+    if pattern == "errno_efault_null":
+        null_probes: dict[str, tuple[list[str], str, str]] = {
+            "clock_getres": (
+                ["errno.h", "stdio.h", "time.h"],
+                "int r = clock_getres(CLOCK_REALTIME, NULL);",
+                "clock_getres.null_ptr",
+            ),
+            "gettimeofday": (
+                ["errno.h", "stdio.h", "sys/time.h"],
+                "int r = gettimeofday(NULL, NULL);",
+                "gettimeofday.null_tv",
+            ),
+            "getitimer": (
+                ["errno.h", "stdio.h", "sys/time.h"],
+                "int r = getitimer(ITIMER_REAL, NULL);",
+                "getitimer.null_val",
+            ),
+            "setitimer": (
+                ["errno.h", "stdio.h", "sys/time.h"],
+                "int r = setitimer(ITIMER_REAL, NULL, NULL);",
+                "setitimer.null_new",
+            ),
+            "sched_getaffinity": (
+                ["errno.h", "stdio.h", "sched.h", "unistd.h"],
+                "unsigned long m; int r = sched_getaffinity(0, sizeof(m), NULL);",
+                "sched_getaffinity.null_mask",
+            ),
+            "sched_setaffinity": (
+                ["errno.h", "stdio.h", "sched.h", "unistd.h"],
+                "unsigned long m = 1; int r = sched_setaffinity(0, sizeof(m), NULL);",
+                "sched_setaffinity.null_mask",
+            ),
+        }
+        if syscall not in null_probes:
+            return None
+        incs, stmt, case_dot = null_probes[syscall]
+        body = f"""
+int main(void)
+{{
+\terrno = 0;
+\t{stmt}
+\tint e = errno;
+\tdprintf(1, "CASE {case_dot} ret=%d errno=%d note=handwritten\\n", r, e);
+\treturn 0;
+}}
+"""
+        return wrap_main(incs, body)
+
     # ---- B02-style path ENOENT (also used for B07 path syscalls) ----
     path_calls: dict[str, tuple[list[str], str]] = {
         "chmod": (["errno.h", "stdio.h", "sys/stat.h", "sys/types.h"], "int r = chmod(p, 0777);"),
@@ -380,20 +471,16 @@ int main(void)
         return wrap_main(incs, body)
 
     if pattern == "errno_badfd":
-        bad: dict[str, tuple[list[str], str]] = {
-            "fchmod": (["errno.h", "stdio.h", "sys/stat.h", "sys/types.h"], "int r = fchmod(-1, 0777);"),
-            "fchown": (["errno.h", "stdio.h", "unistd.h"], "int r = fchown(-1, (uid_t)-1, (gid_t)-1);"),
-        }
-        if syscall not in bad:
+        if syscall not in BADFD_STMT:
             return None
-        incs, stmt = bad[syscall]
+        incs, stmt, _use_long = BADFD_STMT[syscall]
         body = f"""
 int main(void)
 {{
 \terrno = 0;
 \t{stmt}
 \tint e = errno;
-\tdprintf(1, "CASE {ct} ret=%d errno=%d note=handwritten\\n", r, e);
+\tdprintf(1, "CASE {ct} ret=%ld errno=%d note=handwritten\\n", (long)r, e);
 \treturn 0;
 }}
 """

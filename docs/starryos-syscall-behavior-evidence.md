@@ -46,35 +46,35 @@
 | `utime` | `sys_utime` | partial | utime_enoent | utime_enoent |
 | `utimes` | `sys_utimes` | partial | utimes_enoent | utimes_enoent |
 | `utimensat` | `sys_utimensat` | partial | utimensat_enoent | utimensat_enoent |
-| `open` | `sys_open` | not_applicable | (planned) open_enoent | — |
+| `open` | `sys_open` | partial | open_enoent | open_enoent |
 | `openat` | `sys_openat` | partial | openat_badfd | openat_badfd, openat_enoent |
 | `close` | `sys_close` | partial | close_badfd | close_badfd |
-| `close_range` | `sys_close_range` | not_applicable | (planned) close_range_badfd | — |
+| `close_range` | `sys_close_range` | partial | close_range_badfd | close_range_badfd |
 | `dup` | `sys_dup` | partial | dup_badfd | dup_badfd |
-| `dup2` | `sys_dup2` | not_applicable | (planned) dup2_badfd | — |
-| `dup3` | `sys_dup3` | not_applicable | (planned) dup3_badfd | — |
+| `dup2` | `sys_dup2` | partial | dup2_badfd | dup2_badfd |
+| `dup3` | `sys_dup3` | partial | dup3_badfd | dup3_badfd |
 | `fcntl` | `sys_fcntl` | partial | fcntl_badfd | fcntl_badfd |
-| `flock` | `sys_flock` | not_applicable | (planned) flock_badfd | — |
+| `flock` | `sys_flock` | partial | flock_badfd | flock_badfd |
 | `read` | `sys_read` | partial | read_stdin_zero | read_stdin_zero |
-| `readv` | `sys_readv` | not_applicable | (planned) readv_badfd | — |
+| `readv` | `sys_readv` | partial | readv_badfd | readv_badfd |
 | `write` | `sys_write` | partial | write_stdout | write_stdout |
-| `writev` | `sys_writev` | not_applicable | (planned) writev_badfd | — |
+| `writev` | `sys_writev` | partial | writev_badfd | writev_badfd |
 | `lseek` | `sys_lseek` | partial | lseek_badfd | lseek_badfd |
-| `truncate` | `sys_truncate` | not_applicable | (planned) truncate_enoent | — |
-| `ftruncate` | `sys_ftruncate` | not_applicable | (planned) ftruncate_badfd | — |
-| `fallocate` | `sys_fallocate` | not_applicable | (planned) fallocate_badfd | — |
-| `fsync` | `sys_fsync` | not_applicable | (planned) fsync_badfd | — |
-| `fdatasync` | `sys_fdatasync` | not_applicable | (planned) fdatasync_badfd | — |
-| `fadvise64` | `sys_fadvise64` | not_applicable | (planned) fadvise64_badfd | — |
-| `pread64` | `sys_pread64` | not_applicable | (planned) pread64_badfd | — |
-| `pwrite64` | `sys_pwrite64` | not_applicable | (planned) pwrite64_badfd | — |
-| `preadv` | `sys_preadv` | not_applicable | (planned) preadv_badfd | — |
-| `pwritev` | `sys_pwritev` | not_applicable | (planned) pwritev_badfd | — |
-| `preadv2` | `sys_preadv2` | not_applicable | (planned) preadv2_badfd | — |
-| `pwritev2` | `sys_pwritev2` | not_applicable | (planned) pwritev2_badfd | — |
-| `sendfile` | `sys_sendfile` | not_applicable | (planned) sendfile_badfd | — |
-| `copy_file_range` | `sys_copy_file_range` | not_applicable | (planned) copy_file_range_badfd | — |
-| `splice` | `sys_splice` | not_applicable | (planned) splice_badfd | — |
+| `truncate` | `sys_truncate` | partial | truncate_enoent | truncate_enoent |
+| `ftruncate` | `sys_ftruncate` | partial | ftruncate_badfd | ftruncate_badfd |
+| `fallocate` | `sys_fallocate` | partial | fallocate_badfd | fallocate_badfd |
+| `fsync` | `sys_fsync` | partial | fsync_badfd | fsync_badfd |
+| `fdatasync` | `sys_fdatasync` | partial | fdatasync_badfd | fdatasync_badfd |
+| `fadvise64` | `sys_fadvise64` | partial | fadvise64_badfd | fadvise64_badfd |
+| `pread64` | `sys_pread64` | partial | pread64_badfd | pread64_badfd |
+| `pwrite64` | `sys_pwrite64` | partial | pwrite64_badfd | pwrite64_badfd |
+| `preadv` | `sys_preadv` | partial | preadv_badfd | preadv_badfd |
+| `pwritev` | `sys_pwritev` | partial | pwritev_badfd | pwritev_badfd |
+| `preadv2` | `sys_preadv2` | partial | preadv2_badfd | preadv2_badfd |
+| `pwritev2` | `sys_pwritev2` | partial | pwritev2_badfd | pwritev2_badfd |
+| `sendfile` | `sys_sendfile` | partial | sendfile_badfd | sendfile_badfd |
+| `copy_file_range` | `sys_copy_file_range` | partial | copy_file_range_badfd | copy_file_range_badfd |
+| `splice` | `sys_splice` | partial | splice_badfd | splice_badfd |
 | `poll` | `sys_poll` | not_applicable | (planned) poll_linux_contract_p1 | — |
 | `ppoll` | `sys_ppoll` | partial | ppoll_zero_fds | ppoll_zero_fds |
 | `select` | `sys_select` | not_applicable | (planned) select_linux_contract_p1 | — |

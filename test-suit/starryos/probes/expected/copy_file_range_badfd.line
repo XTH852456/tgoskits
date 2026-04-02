@@ -1,0 +1,1 @@
+CASE copy_file_range.badfd ret=-1 errno=9 note=handwritten

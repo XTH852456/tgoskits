@@ -257,225 +257,115 @@ entries:
   notes:
   - B02-file-ops contract probe
 - syscall: close_range
-  parity: not_applicable
-  planned_contract_probe: close_range_badfd
+  contract_probe: close_range_badfd
+  parity: partial
   notes:
-  - rollout_batch=B03-fd-ops
-  - suggested_case=fd=-1 -> EBADF (errno=9)
-  - probe_pattern=errno_badfd
-  - handler=sys_close_range
-  - section=fd ops
-  - Promote to parity partial after contract/*.c + expected exist; then run check_compat_matrix.py
+  - B03-fd-ops contract probe
 - syscall: dup2
-  parity: not_applicable
-  planned_contract_probe: dup2_badfd
+  contract_probe: dup2_badfd
+  parity: partial
   notes:
-  - rollout_batch=B03-fd-ops
-  - suggested_case=fd=-1 -> EBADF (errno=9)
-  - probe_pattern=errno_badfd
-  - handler=sys_dup2
-  - section=fd ops
-  - Promote to parity partial after contract/*.c + expected exist; then run check_compat_matrix.py
+  - B03-fd-ops contract probe
 - syscall: dup3
-  parity: not_applicable
-  planned_contract_probe: dup3_badfd
+  contract_probe: dup3_badfd
+  parity: partial
   notes:
-  - rollout_batch=B03-fd-ops
-  - suggested_case=fd=-1 -> EBADF (errno=9)
-  - probe_pattern=errno_badfd
-  - handler=sys_dup3
-  - section=fd ops
-  - Promote to parity partial after contract/*.c + expected exist; then run check_compat_matrix.py
+  - B03-fd-ops contract probe
 - syscall: flock
-  parity: not_applicable
-  planned_contract_probe: flock_badfd
+  contract_probe: flock_badfd
+  parity: partial
   notes:
-  - rollout_batch=B03-fd-ops
-  - suggested_case=fd=-1 -> EBADF (errno=9)
-  - probe_pattern=errno_badfd
-  - handler=sys_flock
-  - section=fd ops
-  - Promote to parity partial after contract/*.c + expected exist; then run check_compat_matrix.py
+  - B03-fd-ops contract probe
 - syscall: open
-  parity: not_applicable
-  planned_contract_probe: open_enoent
+  contract_probe: open_enoent
+  parity: partial
   notes:
-  - rollout_batch=B03-fd-ops
-  - suggested_case=O_RDONLY on missing abs path -> ENOENT
-  - probe_pattern=special
-  - handler=sys_open
-  - section=fd ops
-  - Promote to parity partial after contract/*.c + expected exist; then run check_compat_matrix.py
+  - B03-fd-ops contract probe
 - syscall: copy_file_range
-  parity: not_applicable
-  planned_contract_probe: copy_file_range_badfd
+  contract_probe: copy_file_range_badfd
+  parity: partial
   notes:
-  - rollout_batch=B04-io
-  - suggested_case=fd=-1 -> EBADF (errno=9)
-  - probe_pattern=errno_badfd
-  - handler=sys_copy_file_range
-  - section=io
-  - Promote to parity partial after contract/*.c + expected exist; then run check_compat_matrix.py
+  - B04-io contract probe
 - syscall: fadvise64
-  parity: not_applicable
-  planned_contract_probe: fadvise64_badfd
+  contract_probe: fadvise64_badfd
+  parity: partial
   notes:
-  - rollout_batch=B04-io
-  - suggested_case=fd=-1 -> EBADF (errno=9)
-  - probe_pattern=errno_badfd
-  - handler=sys_fadvise64
-  - section=io
-  - Promote to parity partial after contract/*.c + expected exist; then run check_compat_matrix.py
+  - B04-io contract probe
 - syscall: fallocate
-  parity: not_applicable
-  planned_contract_probe: fallocate_badfd
+  contract_probe: fallocate_badfd
+  parity: partial
   notes:
-  - rollout_batch=B04-io
-  - suggested_case=fd=-1 -> EBADF (errno=9)
-  - probe_pattern=errno_badfd
-  - handler=sys_fallocate
-  - section=io
-  - Promote to parity partial after contract/*.c + expected exist; then run check_compat_matrix.py
+  - B04-io contract probe
 - syscall: fdatasync
-  parity: not_applicable
-  planned_contract_probe: fdatasync_badfd
+  contract_probe: fdatasync_badfd
+  parity: partial
   notes:
-  - rollout_batch=B04-io
-  - suggested_case=fd=-1 -> EBADF (errno=9)
-  - probe_pattern=errno_badfd
-  - handler=sys_fdatasync
-  - section=io
-  - Promote to parity partial after contract/*.c + expected exist; then run check_compat_matrix.py
+  - B04-io contract probe
 - syscall: fsync
-  parity: not_applicable
-  planned_contract_probe: fsync_badfd
+  contract_probe: fsync_badfd
+  parity: partial
   notes:
-  - rollout_batch=B04-io
-  - suggested_case=fd=-1 -> EBADF (errno=9)
-  - probe_pattern=errno_badfd
-  - handler=sys_fsync
-  - section=io
-  - Promote to parity partial after contract/*.c + expected exist; then run check_compat_matrix.py
+  - B04-io contract probe
 - syscall: ftruncate
-  parity: not_applicable
-  planned_contract_probe: ftruncate_badfd
+  contract_probe: ftruncate_badfd
+  parity: partial
   notes:
-  - rollout_batch=B04-io
-  - suggested_case=fd=-1 -> EBADF (errno=9)
-  - probe_pattern=errno_badfd
-  - handler=sys_ftruncate
-  - section=io
-  - Promote to parity partial after contract/*.c + expected exist; then run check_compat_matrix.py
+  - B04-io contract probe
 - syscall: pread64
-  parity: not_applicable
-  planned_contract_probe: pread64_badfd
+  contract_probe: pread64_badfd
+  parity: partial
   notes:
-  - rollout_batch=B04-io
-  - suggested_case=fd=-1 -> EBADF (errno=9)
-  - probe_pattern=errno_badfd
-  - handler=sys_pread64
-  - section=io
-  - Promote to parity partial after contract/*.c + expected exist; then run check_compat_matrix.py
+  - B04-io contract probe
 - syscall: preadv
-  parity: not_applicable
-  planned_contract_probe: preadv_badfd
+  contract_probe: preadv_badfd
+  parity: partial
   notes:
-  - rollout_batch=B04-io
-  - suggested_case=fd=-1 -> EBADF (errno=9)
-  - probe_pattern=errno_badfd
-  - handler=sys_preadv
-  - section=io
-  - Promote to parity partial after contract/*.c + expected exist; then run check_compat_matrix.py
+  - B04-io contract probe
 - syscall: preadv2
-  parity: not_applicable
-  planned_contract_probe: preadv2_badfd
+  contract_probe: preadv2_badfd
+  parity: partial
   notes:
-  - rollout_batch=B04-io
-  - suggested_case=fd=-1 -> EBADF (errno=9)
-  - probe_pattern=errno_badfd
-  - handler=sys_preadv2
-  - section=io
-  - Promote to parity partial after contract/*.c + expected exist; then run check_compat_matrix.py
+  - B04-io contract probe
 - syscall: pwrite64
-  parity: not_applicable
-  planned_contract_probe: pwrite64_badfd
+  contract_probe: pwrite64_badfd
+  parity: partial
   notes:
-  - rollout_batch=B04-io
-  - suggested_case=fd=-1 -> EBADF (errno=9)
-  - probe_pattern=errno_badfd
-  - handler=sys_pwrite64
-  - section=io
-  - Promote to parity partial after contract/*.c + expected exist; then run check_compat_matrix.py
+  - B04-io contract probe
 - syscall: pwritev
-  parity: not_applicable
-  planned_contract_probe: pwritev_badfd
+  contract_probe: pwritev_badfd
+  parity: partial
   notes:
-  - rollout_batch=B04-io
-  - suggested_case=fd=-1 -> EBADF (errno=9)
-  - probe_pattern=errno_badfd
-  - handler=sys_pwritev
-  - section=io
-  - Promote to parity partial after contract/*.c + expected exist; then run check_compat_matrix.py
+  - B04-io contract probe
 - syscall: pwritev2
-  parity: not_applicable
-  planned_contract_probe: pwritev2_badfd
+  contract_probe: pwritev2_badfd
+  parity: partial
   notes:
-  - rollout_batch=B04-io
-  - suggested_case=fd=-1 -> EBADF (errno=9)
-  - probe_pattern=errno_badfd
-  - handler=sys_pwritev2
-  - section=io
-  - Promote to parity partial after contract/*.c + expected exist; then run check_compat_matrix.py
+  - B04-io contract probe
 - syscall: readv
-  parity: not_applicable
-  planned_contract_probe: readv_badfd
+  contract_probe: readv_badfd
+  parity: partial
   notes:
-  - rollout_batch=B04-io
-  - suggested_case=fd=-1 -> EBADF (errno=9)
-  - probe_pattern=errno_badfd
-  - handler=sys_readv
-  - section=io
-  - Promote to parity partial after contract/*.c + expected exist; then run check_compat_matrix.py
+  - B04-io contract probe
 - syscall: sendfile
-  parity: not_applicable
-  planned_contract_probe: sendfile_badfd
+  contract_probe: sendfile_badfd
+  parity: partial
   notes:
-  - rollout_batch=B04-io
-  - suggested_case=fd=-1 -> EBADF (errno=9)
-  - probe_pattern=errno_badfd
-  - handler=sys_sendfile
-  - section=io
-  - Promote to parity partial after contract/*.c + expected exist; then run check_compat_matrix.py
+  - B04-io contract probe
 - syscall: splice
-  parity: not_applicable
-  planned_contract_probe: splice_badfd
+  contract_probe: splice_badfd
+  parity: partial
   notes:
-  - rollout_batch=B04-io
-  - suggested_case=fd=-1 -> EBADF (errno=9)
-  - probe_pattern=errno_badfd
-  - handler=sys_splice
-  - section=io
-  - Promote to parity partial after contract/*.c + expected exist; then run check_compat_matrix.py
+  - B04-io contract probe
 - syscall: truncate
-  parity: not_applicable
-  planned_contract_probe: truncate_enoent
+  contract_probe: truncate_enoent
+  parity: partial
   notes:
-  - rollout_batch=B04-io
-  - suggested_case=missing abs path -> ENOENT (errno=2)
-  - probe_pattern=errno_enoent_path
-  - handler=sys_truncate
-  - section=io
-  - Promote to parity partial after contract/*.c + expected exist; then run check_compat_matrix.py
+  - B04-io contract probe
 - syscall: writev
-  parity: not_applicable
-  planned_contract_probe: writev_badfd
+  contract_probe: writev_badfd
+  parity: partial
   notes:
-  - rollout_batch=B04-io
-  - suggested_case=fd=-1 -> EBADF (errno=9)
-  - probe_pattern=errno_badfd
-  - handler=sys_writev
-  - section=io
-  - Promote to parity partial after contract/*.c + expected exist; then run check_compat_matrix.py
+  - B04-io contract probe
 - syscall: epoll_create1
   parity: not_applicable
   planned_contract_probe: epoll_create1_einval
