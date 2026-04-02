@@ -184,6 +184,8 @@ def write_behavior_table(
         "全量 **Linux user oracle**：`VERIFY_STRICT=1 test-suit/starryos/scripts/run-diff-probes.sh verify-oracle-all`。",
         "全量 **SMP2 guest vs oracle**：`test-suit/starryos/scripts/run-smp2-guest-matrix.sh`。",
         "",
+        "**轨 B（Linux guest oracle，真内核）**：锚点见 [starryos-linux-guest-oracle-pin.md](starryos-linux-guest-oracle-pin.md)。需本机 `riscv64` `Image` 与交叉 `gcc`（探针 `build-probes.sh` 已带 `-no-pie`）。金线在 `test-suit/starryos/probes/expected/guest-alpine323/*.line`。一键：`./scripts/verify_linux_guest_oracle.sh -i /path/to/Image`（可加 `-a` 全量比对）；重写金线：`STARRY_LINUX_GUEST_IMAGE=... CC=riscv64-...-gcc scripts/refresh_guest_oracle_expected.sh`。CI 可选全量：`starryos-linux-guest-oracle` workflow 勾选 **run_full_guest_verify**。与轨 A（`qemu-riscv64` user）偏差时，以 guest 输出为 **轨 B 叙事** 参考。",
+        "",
         f"**分发表条目数**: {len(rows)}",
         "",
         "| syscall | handler | matrix_parity | matrix_probe | catalog_probes |",
