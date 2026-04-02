@@ -519,7 +519,8 @@ pub fn sys_sync() -> AxResult<isize> {
     Ok(0)
 }
 
-pub fn sys_syncfs(_fd: i32) -> AxResult<isize> {
+pub fn sys_syncfs(fd: i32) -> AxResult<isize> {
+    let _ = get_file_like(fd)?;
     warn!("dummy sys_syncfs");
     Ok(0)
 }

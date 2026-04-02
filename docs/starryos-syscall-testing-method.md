@@ -17,7 +17,8 @@
 ## 辅助脚本
 
 - **`scripts/check_probe_coverage.py`**：校验 catalog 中 `tests:` 所列路径均在仓库中存在。
-- **`scripts/check_compat_matrix.py`**：校验 **`docs/starryos-syscall-compat-matrix.yaml`** 中 **`parity: partial`** / **`aligned`** 且 **`contract_probe`** 非空的行，在仓库中存在对应 **`contract/<probe>.c`** 与 **`expected/<probe>.line`** 或 **`.cases`**。
+- **`scripts/check_compat_matrix.py`**：校验 **`docs/starryos-syscall-compat-matrix.yaml`** 中 **`parity: partial`** / **`aligned`** 且 **`contract_probe`** 非空的行，在仓库中存在对应 **`contract/<probe>.c`** 与 **`expected/<probe>.line`** 或 **`.cases`**。**`parity: not_applicable`** 行可带 **`planned_contract_probe`**（仅脚手架，不校验文件）。
+- **`scripts/gen_probe_rollout.py`**：按分发表 + `mod.rs` handler 为其余 syscall 写入矩阵脚手架（**`not_applicable` + `planned_contract_probe` + rollout 注释**），并生成 **`docs/starryos-syscall-probe-rollout.yaml`**（按批次汇总）。随后 **`python3 scripts/render_starry_syscall_inventory.py --step 3`** 更新行为证据表中的 **`(planned) …`** 列。
 - **`run-diff-probes.sh`**：设置 **`VERIFY_STRICT=1`** 时，若缺少 `qemu-riscv64`，`verify-oracle` / `verify-oracle-all` 以退出码 **2** 失败（便于 CI 要求必须跑 oracle）。
 - **`diff-guest-line.sh`**：将串口/日志中的一行 `CASE …` 与 `expected/<probe>.line` 比对。
 - **`ensure-starry-base-rootfs.sh`**：若缺 **`target/.../rootfs-riscv64.img`** 则自动 **`cargo xtask starry rootfs --arch riscv64`**（`prepare-rootfs-with-probe.sh` 与 **`run-smp2-guest-matrix.sh`** 共用）。

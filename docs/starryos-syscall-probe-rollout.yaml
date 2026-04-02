@@ -1,0 +1,1174 @@
+schema_version: 1
+description: Planned Linux syscall contract probes (batches). Matrix uses parity not_applicable until
+  promoted.
+done_partial_reference:
+- clock_gettime
+- close
+- dup
+- execve
+- fcntl
+- futex
+- getcwd
+- ioctl
+- lseek
+- openat
+- pipe2
+- ppoll
+- read
+- unlink
+- wait4
+- write
+batch_order_hint:
+- B02-file-ops
+- B03-fd-ops
+- B04-io
+- B05-io-mpx
+- B06-mm
+- B07-fs-stat
+- B08-vfs-special
+- B09-task-ops
+- B10-task-mgmt
+- B11-task-sched
+- B12-task-info
+- B13-signal
+- B14-sys
+- B15-time
+- B16-sync
+- B17-ipc
+- B18-net
+- B19-stubs
+batches:
+- id: B02-file-ops
+  title: B02 File Ops
+  syscall_count: 13
+  syscalls:
+  - syscall: chmod
+    planned_contract_probe: chmod_enoent
+    suggested_case: missing abs path -> ENOENT (errno=2)
+    probe_pattern: errno_enoent_path
+    handler: sys_chmod
+    section: file ops
+  - syscall: chown
+    planned_contract_probe: chown_enoent
+    suggested_case: missing abs path -> ENOENT (errno=2)
+    probe_pattern: errno_enoent_path
+    handler: sys_chown
+    section: file ops
+  - syscall: fchmod
+    planned_contract_probe: fchmod_badfd
+    suggested_case: fd=-1 -> EBADF (errno=9)
+    probe_pattern: errno_badfd
+    handler: sys_fchmod
+    section: file ops
+  - syscall: fchmodat
+    planned_contract_probe: fchmodat_enoent
+    suggested_case: AT_FDCWD + missing path -> ENOENT
+    probe_pattern: errno_enoent_at
+    handler: sys_fchmodat
+    section: file ops
+  - syscall: fchmodat2
+    planned_contract_probe: fchmodat2_enoent
+    suggested_case: AT_FDCWD + missing path -> ENOENT
+    probe_pattern: errno_enoent_at
+    handler: sys_fchmodat
+    section: file ops
+  - syscall: fchown
+    planned_contract_probe: fchown_badfd
+    suggested_case: fd=-1 -> EBADF (errno=9)
+    probe_pattern: errno_badfd
+    handler: sys_fchown
+    section: file ops
+  - syscall: fchownat
+    planned_contract_probe: fchownat_enoent
+    suggested_case: AT_FDCWD + missing path -> ENOENT
+    probe_pattern: errno_enoent_at
+    handler: sys_fchownat
+    section: file ops
+  - syscall: lchown
+    planned_contract_probe: lchown_enoent
+    suggested_case: missing abs path -> ENOENT (errno=2)
+    probe_pattern: errno_enoent_path
+    handler: sys_lchown
+    section: file ops
+  - syscall: readlink
+    planned_contract_probe: readlink_enoent
+    suggested_case: missing abs path -> ENOENT (errno=2)
+    probe_pattern: errno_enoent_path
+    handler: sys_readlink
+    section: file ops
+  - syscall: readlinkat
+    planned_contract_probe: readlinkat_enoent
+    suggested_case: AT_FDCWD + missing path -> ENOENT
+    probe_pattern: errno_enoent_at
+    handler: sys_readlinkat
+    section: file ops
+  - syscall: utime
+    planned_contract_probe: utime_enoent
+    suggested_case: missing abs path -> ENOENT (errno=2)
+    probe_pattern: errno_enoent_path
+    handler: sys_utime
+    section: file ops
+  - syscall: utimensat
+    planned_contract_probe: utimensat_enoent
+    suggested_case: AT_FDCWD + missing path -> ENOENT
+    probe_pattern: errno_enoent_at
+    handler: sys_utimensat
+    section: file ops
+  - syscall: utimes
+    planned_contract_probe: utimes_enoent
+    suggested_case: missing abs path -> ENOENT (errno=2)
+    probe_pattern: errno_enoent_path
+    handler: sys_utimes
+    section: file ops
+- id: B03-fd-ops
+  title: B03 Fd Ops
+  syscall_count: 5
+  syscalls:
+  - syscall: close_range
+    planned_contract_probe: close_range_badfd
+    suggested_case: fd=-1 -> EBADF (errno=9)
+    probe_pattern: errno_badfd
+    handler: sys_close_range
+    section: fd ops
+  - syscall: dup2
+    planned_contract_probe: dup2_badfd
+    suggested_case: fd=-1 -> EBADF (errno=9)
+    probe_pattern: errno_badfd
+    handler: sys_dup2
+    section: fd ops
+  - syscall: dup3
+    planned_contract_probe: dup3_badfd
+    suggested_case: fd=-1 -> EBADF (errno=9)
+    probe_pattern: errno_badfd
+    handler: sys_dup3
+    section: fd ops
+  - syscall: flock
+    planned_contract_probe: flock_badfd
+    suggested_case: fd=-1 -> EBADF (errno=9)
+    probe_pattern: errno_badfd
+    handler: sys_flock
+    section: fd ops
+  - syscall: open
+    planned_contract_probe: open_enoent
+    suggested_case: O_RDONLY on missing abs path -> ENOENT
+    probe_pattern: special
+    handler: sys_open
+    section: fd ops
+- id: B04-io
+  title: B04 Io
+  syscall_count: 17
+  syscalls:
+  - syscall: copy_file_range
+    planned_contract_probe: copy_file_range_badfd
+    suggested_case: fd=-1 -> EBADF (errno=9)
+    probe_pattern: errno_badfd
+    handler: sys_copy_file_range
+    section: io
+  - syscall: fadvise64
+    planned_contract_probe: fadvise64_badfd
+    suggested_case: fd=-1 -> EBADF (errno=9)
+    probe_pattern: errno_badfd
+    handler: sys_fadvise64
+    section: io
+  - syscall: fallocate
+    planned_contract_probe: fallocate_badfd
+    suggested_case: fd=-1 -> EBADF (errno=9)
+    probe_pattern: errno_badfd
+    handler: sys_fallocate
+    section: io
+  - syscall: fdatasync
+    planned_contract_probe: fdatasync_badfd
+    suggested_case: fd=-1 -> EBADF (errno=9)
+    probe_pattern: errno_badfd
+    handler: sys_fdatasync
+    section: io
+  - syscall: fsync
+    planned_contract_probe: fsync_badfd
+    suggested_case: fd=-1 -> EBADF (errno=9)
+    probe_pattern: errno_badfd
+    handler: sys_fsync
+    section: io
+  - syscall: ftruncate
+    planned_contract_probe: ftruncate_badfd
+    suggested_case: fd=-1 -> EBADF (errno=9)
+    probe_pattern: errno_badfd
+    handler: sys_ftruncate
+    section: io
+  - syscall: pread64
+    planned_contract_probe: pread64_badfd
+    suggested_case: fd=-1 -> EBADF (errno=9)
+    probe_pattern: errno_badfd
+    handler: sys_pread64
+    section: io
+  - syscall: preadv
+    planned_contract_probe: preadv_badfd
+    suggested_case: fd=-1 -> EBADF (errno=9)
+    probe_pattern: errno_badfd
+    handler: sys_preadv
+    section: io
+  - syscall: preadv2
+    planned_contract_probe: preadv2_badfd
+    suggested_case: fd=-1 -> EBADF (errno=9)
+    probe_pattern: errno_badfd
+    handler: sys_preadv2
+    section: io
+  - syscall: pwrite64
+    planned_contract_probe: pwrite64_badfd
+    suggested_case: fd=-1 -> EBADF (errno=9)
+    probe_pattern: errno_badfd
+    handler: sys_pwrite64
+    section: io
+  - syscall: pwritev
+    planned_contract_probe: pwritev_badfd
+    suggested_case: fd=-1 -> EBADF (errno=9)
+    probe_pattern: errno_badfd
+    handler: sys_pwritev
+    section: io
+  - syscall: pwritev2
+    planned_contract_probe: pwritev2_badfd
+    suggested_case: fd=-1 -> EBADF (errno=9)
+    probe_pattern: errno_badfd
+    handler: sys_pwritev2
+    section: io
+  - syscall: readv
+    planned_contract_probe: readv_badfd
+    suggested_case: fd=-1 -> EBADF (errno=9)
+    probe_pattern: errno_badfd
+    handler: sys_readv
+    section: io
+  - syscall: sendfile
+    planned_contract_probe: sendfile_badfd
+    suggested_case: fd=-1 -> EBADF (errno=9)
+    probe_pattern: errno_badfd
+    handler: sys_sendfile
+    section: io
+  - syscall: splice
+    planned_contract_probe: splice_badfd
+    suggested_case: fd=-1 -> EBADF (errno=9)
+    probe_pattern: errno_badfd
+    handler: sys_splice
+    section: io
+  - syscall: truncate
+    planned_contract_probe: truncate_enoent
+    suggested_case: missing abs path -> ENOENT (errno=2)
+    probe_pattern: errno_enoent_path
+    handler: sys_truncate
+    section: io
+  - syscall: writev
+    planned_contract_probe: writev_badfd
+    suggested_case: fd=-1 -> EBADF (errno=9)
+    probe_pattern: errno_badfd
+    handler: sys_writev
+    section: io
+- id: B05-io-mpx
+  title: B05 Io Mpx
+  syscall_count: 7
+  syscalls:
+  - syscall: epoll_create1
+    planned_contract_probe: epoll_create1_einval
+    suggested_case: invalid flags -> EINVAL
+    probe_pattern: special
+    handler: sys_epoll_create1
+    section: io mpx
+  - syscall: epoll_ctl
+    planned_contract_probe: epoll_ctl_badfd
+    suggested_case: fd=-1 -> EBADF (errno=9)
+    probe_pattern: errno_badfd
+    handler: sys_epoll_ctl
+    section: io mpx
+  - syscall: epoll_pwait
+    planned_contract_probe: epoll_pwait_badfd
+    suggested_case: fd=-1 -> EBADF (errno=9)
+    probe_pattern: errno_badfd
+    handler: sys_epoll_pwait
+    section: io mpx
+  - syscall: epoll_pwait2
+    planned_contract_probe: epoll_pwait2_badfd
+    suggested_case: fd=-1 -> EBADF (errno=9)
+    probe_pattern: errno_badfd
+    handler: sys_epoll_pwait2
+    section: io mpx
+  - syscall: poll
+    planned_contract_probe: poll_linux_contract_p1
+    suggested_case: pick minimal errno oracle case per man 2
+    probe_pattern: tbd_errno
+    handler: sys_poll
+    section: io mpx
+  - syscall: pselect6
+    planned_contract_probe: pselect6_linux_contract_p1
+    suggested_case: pick minimal errno oracle case per man 2
+    probe_pattern: tbd_errno
+    handler: sys_pselect6
+    section: io mpx
+  - syscall: select
+    planned_contract_probe: select_linux_contract_p1
+    suggested_case: pick minimal errno oracle case per man 2
+    probe_pattern: tbd_errno
+    handler: sys_select
+    section: io mpx
+- id: B06-mm
+  title: B06 Mm
+  syscall_count: 10
+  syscalls:
+  - syscall: brk
+    planned_contract_probe: brk_increment_smoke
+    suggested_case: increment 0 returns current brk; compare shape
+    probe_pattern: special
+    handler: sys_brk
+    section: mm
+  - syscall: madvise
+    planned_contract_probe: madvise_einval
+    suggested_case: invalid advice -> EINVAL
+    probe_pattern: special
+    handler: sys_madvise
+    section: mm
+  - syscall: mincore
+    planned_contract_probe: mincore_efault
+    suggested_case: invalid vec -> EFAULT
+    probe_pattern: special
+    handler: sys_mincore
+    section: mm
+  - syscall: mlock
+    planned_contract_probe: mlock_eagain
+    suggested_case: over limit -> EAGAIN/ENOMEM
+    probe_pattern: special
+    handler: sys_mlock
+    section: mm
+  - syscall: mlock2
+    planned_contract_probe: mlock2_einval
+    suggested_case: bad flags -> EINVAL
+    probe_pattern: special
+    handler: sys_mlock2
+    section: mm
+  - syscall: mmap
+    planned_contract_probe: mmap_nonanon_badfd
+    suggested_case: MAP_ANONYMOUS cleared + fd=-1 -> EBADF on Linux; flags TBD in contract
+    probe_pattern: special
+    handler: sys_mmap
+    section: mm
+  - syscall: mprotect
+    planned_contract_probe: mprotect_einval
+    suggested_case: NULL len 0 -> EINVAL
+    probe_pattern: special
+    handler: sys_mprotect
+    section: mm
+  - syscall: mremap
+    planned_contract_probe: mremap_einval
+    suggested_case: invalid old_address -> EINVAL
+    probe_pattern: special
+    handler: sys_mremap
+    section: mm
+  - syscall: msync
+    planned_contract_probe: msync_einval
+    suggested_case: invalid flags -> EINVAL
+    probe_pattern: special
+    handler: sys_msync
+    section: mm
+  - syscall: munmap
+    planned_contract_probe: munmap_einval
+    suggested_case: NULL len mismatch -> EINVAL
+    probe_pattern: special
+    handler: sys_munmap
+    section: mm
+- id: B07-fs-stat
+  title: B07 Fs Stat
+  syscall_count: 11
+  syscalls:
+  - syscall: access
+    planned_contract_probe: access_enoent
+    suggested_case: missing abs path -> ENOENT (errno=2)
+    probe_pattern: errno_enoent_path
+    handler: sys_access
+    section: fs stat
+  - syscall: faccessat
+    planned_contract_probe: faccessat_enoent
+    suggested_case: AT_FDCWD + missing path -> ENOENT
+    probe_pattern: errno_enoent_at
+    handler: sys_faccessat2
+    section: fs stat
+  - syscall: faccessat2
+    planned_contract_probe: faccessat2_enoent
+    suggested_case: AT_FDCWD + missing path -> ENOENT
+    probe_pattern: errno_enoent_at
+    handler: sys_faccessat2
+    section: fs stat
+  - syscall: fstat
+    planned_contract_probe: fstat_badfd
+    suggested_case: fd=-1 -> EBADF (errno=9)
+    probe_pattern: errno_badfd
+    handler: sys_fstat
+    section: fs stat
+  - syscall: fstatat
+    planned_contract_probe: fstatat_enoent
+    suggested_case: AT_FDCWD + missing path -> ENOENT
+    probe_pattern: errno_enoent_at
+    handler: sys_fstatat
+    section: fs stat
+  - syscall: fstatfs
+    planned_contract_probe: fstatfs_badfd
+    suggested_case: fd=-1 -> EBADF (errno=9)
+    probe_pattern: errno_badfd
+    handler: sys_fstatfs
+    section: fs stat
+  - syscall: lstat
+    planned_contract_probe: lstat_enoent
+    suggested_case: missing abs path -> ENOENT (errno=2)
+    probe_pattern: errno_enoent_path
+    handler: sys_lstat
+    section: fs stat
+  - syscall: newfstatat
+    planned_contract_probe: newfstatat_enoent
+    suggested_case: AT_FDCWD + missing path -> ENOENT
+    probe_pattern: errno_enoent_at
+    handler: sys_fstatat
+    section: fs stat
+  - syscall: stat
+    planned_contract_probe: stat_enoent
+    suggested_case: missing abs path -> ENOENT (errno=2)
+    probe_pattern: errno_enoent_path
+    handler: sys_stat
+    section: fs stat
+  - syscall: statfs
+    planned_contract_probe: statfs_linux_contract_p1
+    suggested_case: pick minimal errno oracle case per man 2
+    probe_pattern: tbd_errno
+    handler: sys_statfs
+    section: fs stat
+  - syscall: statx
+    planned_contract_probe: statx_enoent
+    suggested_case: missing abs path -> ENOENT (errno=2)
+    probe_pattern: errno_enoent_path
+    handler: sys_statx
+    section: fs stat
+- id: B08-vfs-special
+  title: B08 Vfs Special
+  syscall_count: 8
+  syscalls:
+  - syscall: eventfd2
+    planned_contract_probe: eventfd2_einval
+    suggested_case: invalid flags -> EINVAL
+    probe_pattern: special
+    handler: sys_eventfd2
+    section: event
+  - syscall: memfd_create
+    planned_contract_probe: memfd_create_einval
+    suggested_case: invalid flags -> EINVAL
+    probe_pattern: special
+    handler: sys_memfd_create
+    section: memfd
+  - syscall: mount
+    planned_contract_probe: mount_enoent
+    suggested_case: missing abs path -> ENOENT (errno=2)
+    probe_pattern: errno_enoent_path
+    handler: sys_mount
+    section: fs mount
+  - syscall: pidfd_getfd
+    planned_contract_probe: pidfd_getfd_badfd
+    suggested_case: fd=-1 -> EBADF (errno=9)
+    probe_pattern: errno_badfd
+    handler: sys_pidfd_getfd
+    section: pidfd
+  - syscall: pidfd_open
+    planned_contract_probe: pidfd_open_esrch
+    suggested_case: nonexistent pid -> ESRCH
+    probe_pattern: special
+    handler: sys_pidfd_open
+    section: pidfd
+  - syscall: pidfd_send_signal
+    planned_contract_probe: pidfd_send_signal_badfd
+    suggested_case: fd=-1 -> EBADF (errno=9)
+    probe_pattern: errno_badfd
+    handler: sys_pidfd_send_signal
+    section: pidfd
+  - syscall: pipe
+    planned_contract_probe: pipe_linux_contract_p1
+    suggested_case: pick minimal errno oracle case per man 2
+    probe_pattern: tbd_errno
+    handler: sys_pipe2
+    section: pipe
+  - syscall: umount2
+    planned_contract_probe: umount2_enoent
+    suggested_case: missing abs path -> ENOENT (errno=2)
+    probe_pattern: errno_enoent_path
+    handler: sys_umount2
+    section: fs mount
+- id: B09-task-ops
+  title: B09 Task Ops
+  syscall_count: 11
+  syscalls:
+  - syscall: arch_prctl
+    planned_contract_probe: arch_prctl_linux_contract_p1
+    suggested_case: pick minimal errno oracle case per man 2
+    probe_pattern: tbd_errno
+    handler: sys_arch_prctl
+    section: task ops
+  - syscall: capget
+    planned_contract_probe: capget_linux_contract_p1
+    suggested_case: pick minimal errno oracle case per man 2
+    probe_pattern: tbd_errno
+    handler: sys_capget
+    section: task ops
+  - syscall: capset
+    planned_contract_probe: capset_linux_contract_p1
+    suggested_case: pick minimal errno oracle case per man 2
+    probe_pattern: tbd_errno
+    handler: sys_capset
+    section: task ops
+  - syscall: get_mempolicy
+    planned_contract_probe: get_mempolicy_linux_contract_p1
+    suggested_case: pick minimal errno oracle case per man 2
+    probe_pattern: tbd_errno
+    handler: sys_get_mempolicy
+    section: task ops
+  - syscall: prctl
+    planned_contract_probe: prctl_linux_contract_p1
+    suggested_case: pick minimal errno oracle case per man 2
+    probe_pattern: tbd_errno
+    handler: sys_prctl
+    section: task ops
+  - syscall: prlimit64
+    planned_contract_probe: prlimit64_linux_contract_p1
+    suggested_case: pick minimal errno oracle case per man 2
+    probe_pattern: tbd_errno
+    handler: sys_prlimit64
+    section: task ops
+  - syscall: set_tid_address
+    planned_contract_probe: set_tid_address_linux_contract_p1
+    suggested_case: pick minimal errno oracle case per man 2
+    probe_pattern: tbd_errno
+    handler: sys_set_tid_address
+    section: task ops
+  - syscall: setresgid
+    planned_contract_probe: setresgid_linux_contract_p1
+    suggested_case: pick minimal errno oracle case per man 2
+    probe_pattern: tbd_errno
+    handler: sys_setresgid
+    section: task ops
+  - syscall: setresuid
+    planned_contract_probe: setresuid_linux_contract_p1
+    suggested_case: pick minimal errno oracle case per man 2
+    probe_pattern: tbd_errno
+    handler: sys_setresuid
+    section: task ops
+  - syscall: setreuid
+    planned_contract_probe: setreuid_linux_contract_p1
+    suggested_case: pick minimal errno oracle case per man 2
+    probe_pattern: tbd_errno
+    handler: sys_setreuid
+    section: task ops
+  - syscall: umask
+    planned_contract_probe: umask_linux_contract_p1
+    suggested_case: pick minimal errno oracle case per man 2
+    probe_pattern: tbd_errno
+    handler: sys_umask
+    section: task ops
+- id: B10-task-mgmt
+  title: B10 Task Mgmt
+  syscall_count: 9
+  syscalls:
+  - syscall: clone
+    planned_contract_probe: clone_errno_probe
+    suggested_case: invalid flags -> EINVAL (minimal)
+    probe_pattern: special
+    handler: sys_clone
+    section: task management
+  - syscall: clone3
+    planned_contract_probe: clone3_errno_probe
+    suggested_case: NULL attr -> EFAULT/EINVAL
+    probe_pattern: special
+    handler: sys_clone3
+    section: task management
+  - syscall: exit
+    planned_contract_probe: exit_smoke_v1
+    suggested_case: exit(0); last thread
+    probe_pattern: special
+    handler: sys_exit
+    section: task management
+  - syscall: exit_group
+    planned_contract_probe: exit_group_smoke_v1
+    suggested_case: exit_group(0)
+    probe_pattern: special
+    handler: sys_exit_group
+    section: task management
+  - syscall: fork
+    planned_contract_probe: fork_smoke_v1
+    suggested_case: child exits 0; host/guest isolation heavy
+    probe_pattern: special
+    handler: sys_fork
+    section: task management
+  - syscall: getpgid
+    planned_contract_probe: getpgid_linux_contract_p1
+    suggested_case: pick minimal errno oracle case per man 2
+    probe_pattern: tbd_errno
+    handler: sys_getpgid
+    section: task management
+  - syscall: getsid
+    planned_contract_probe: getsid_linux_contract_p1
+    suggested_case: pick minimal errno oracle case per man 2
+    probe_pattern: tbd_errno
+    handler: sys_getsid
+    section: task management
+  - syscall: setpgid
+    planned_contract_probe: setpgid_linux_contract_p1
+    suggested_case: pick minimal errno oracle case per man 2
+    probe_pattern: tbd_errno
+    handler: sys_setpgid
+    section: task management
+  - syscall: setsid
+    planned_contract_probe: setsid_linux_contract_p1
+    suggested_case: pick minimal errno oracle case per man 2
+    probe_pattern: tbd_errno
+    handler: sys_setsid
+    section: task management
+- id: B11-task-sched
+  title: B11 Task Sched
+  syscall_count: 9
+  syscalls:
+  - syscall: clock_nanosleep
+    planned_contract_probe: clock_nanosleep_linux_contract_p1
+    suggested_case: pick minimal errno oracle case per man 2
+    probe_pattern: tbd_errno
+    handler: sys_clock_nanosleep
+    section: task sched
+  - syscall: getpriority
+    planned_contract_probe: getpriority_linux_contract_p1
+    suggested_case: pick minimal errno oracle case per man 2
+    probe_pattern: tbd_errno
+    handler: sys_getpriority
+    section: task sched
+  - syscall: nanosleep
+    planned_contract_probe: nanosleep_linux_contract_p1
+    suggested_case: pick minimal errno oracle case per man 2
+    probe_pattern: tbd_errno
+    handler: sys_nanosleep
+    section: task sched
+  - syscall: sched_getaffinity
+    planned_contract_probe: sched_getaffinity_null_ptr_efault
+    suggested_case: NULL result struct -> EFAULT (errno=14)
+    probe_pattern: errno_efault_null
+    handler: sys_sched_getaffinity
+    section: task sched
+  - syscall: sched_getparam
+    planned_contract_probe: sched_getparam_linux_contract_p1
+    suggested_case: pick minimal errno oracle case per man 2
+    probe_pattern: tbd_errno
+    handler: sys_sched_getparam
+    section: task sched
+  - syscall: sched_getscheduler
+    planned_contract_probe: sched_getscheduler_linux_contract_p1
+    suggested_case: pick minimal errno oracle case per man 2
+    probe_pattern: tbd_errno
+    handler: sys_sched_getscheduler
+    section: task sched
+  - syscall: sched_setaffinity
+    planned_contract_probe: sched_setaffinity_null_ptr_efault
+    suggested_case: NULL result struct -> EFAULT (errno=14)
+    probe_pattern: errno_efault_null
+    handler: sys_sched_setaffinity
+    section: task sched
+  - syscall: sched_setscheduler
+    planned_contract_probe: sched_setscheduler_linux_contract_p1
+    suggested_case: pick minimal errno oracle case per man 2
+    probe_pattern: tbd_errno
+    handler: sys_sched_setscheduler
+    section: task sched
+  - syscall: sched_yield
+    planned_contract_probe: sched_yield_linux_contract_p1
+    suggested_case: pick minimal errno oracle case per man 2
+    probe_pattern: tbd_errno
+    handler: sys_sched_yield
+    section: task sched
+- id: B12-task-info
+  title: B12 Task Info
+  syscall_count: 4
+  syscalls:
+  - syscall: getpid
+    planned_contract_probe: getpid_linux_contract_p1
+    suggested_case: pick minimal errno oracle case per man 2
+    probe_pattern: tbd_errno
+    handler: sys_getpid
+    section: task info
+  - syscall: getppid
+    planned_contract_probe: getppid_linux_contract_p1
+    suggested_case: pick minimal errno oracle case per man 2
+    probe_pattern: tbd_errno
+    handler: sys_getppid
+    section: task info
+  - syscall: getrusage
+    planned_contract_probe: getrusage_linux_contract_p1
+    suggested_case: pick minimal errno oracle case per man 2
+    probe_pattern: tbd_errno
+    handler: sys_getrusage
+    section: task info
+  - syscall: gettid
+    planned_contract_probe: gettid_linux_contract_p1
+    suggested_case: pick minimal errno oracle case per man 2
+    probe_pattern: tbd_errno
+    handler: sys_gettid
+    section: task info
+- id: B13-signal
+  title: B13 Signal
+  syscall_count: 15
+  syscalls:
+  - syscall: get_robust_list
+    planned_contract_probe: get_robust_list_linux_contract_p1
+    suggested_case: pick minimal errno oracle case per man 2
+    probe_pattern: tbd_errno
+    handler: sys_get_robust_list
+    section: signal
+  - syscall: kill
+    planned_contract_probe: kill_linux_contract_p1
+    suggested_case: pick minimal errno oracle case per man 2
+    probe_pattern: tbd_errno
+    handler: sys_kill
+    section: signal
+  - syscall: rt_sigaction
+    planned_contract_probe: rt_sigaction_linux_contract_p1
+    suggested_case: pick minimal errno oracle case per man 2
+    probe_pattern: tbd_errno
+    handler: sys_rt_sigaction
+    section: signal
+  - syscall: rt_sigpending
+    planned_contract_probe: rt_sigpending_linux_contract_p1
+    suggested_case: pick minimal errno oracle case per man 2
+    probe_pattern: tbd_errno
+    handler: sys_rt_sigpending
+    section: signal
+  - syscall: rt_sigprocmask
+    planned_contract_probe: rt_sigprocmask_linux_contract_p1
+    suggested_case: pick minimal errno oracle case per man 2
+    probe_pattern: tbd_errno
+    handler: sys_rt_sigprocmask
+    section: signal
+  - syscall: rt_sigqueueinfo
+    planned_contract_probe: rt_sigqueueinfo_linux_contract_p1
+    suggested_case: pick minimal errno oracle case per man 2
+    probe_pattern: tbd_errno
+    handler: sys_rt_sigqueueinfo
+    section: signal
+  - syscall: rt_sigreturn
+    planned_contract_probe: rt_sigreturn_probe_tbd
+    suggested_case: return path; not a simple errno probe
+    probe_pattern: special
+    handler: sys_rt_sigreturn
+    section: signal
+  - syscall: rt_sigsuspend
+    planned_contract_probe: rt_sigsuspend_probe_tbd
+    suggested_case: blocks; needs signal delivery
+    probe_pattern: special
+    handler: sys_rt_sigsuspend
+    section: signal
+  - syscall: rt_sigtimedwait
+    planned_contract_probe: rt_sigtimedwait_probe_tbd
+    suggested_case: timeout 0 no matching sig
+    probe_pattern: special
+    handler: sys_rt_sigtimedwait
+    section: signal
+  - syscall: rt_tgsigqueueinfo
+    planned_contract_probe: rt_tgsigqueueinfo_linux_contract_p1
+    suggested_case: pick minimal errno oracle case per man 2
+    probe_pattern: tbd_errno
+    handler: sys_rt_tgsigqueueinfo
+    section: signal
+  - syscall: set_robust_list
+    planned_contract_probe: set_robust_list_linux_contract_p1
+    suggested_case: pick minimal errno oracle case per man 2
+    probe_pattern: tbd_errno
+    handler: sys_set_robust_list
+    section: signal
+  - syscall: sigaltstack
+    planned_contract_probe: sigaltstack_linux_contract_p1
+    suggested_case: pick minimal errno oracle case per man 2
+    probe_pattern: tbd_errno
+    handler: sys_sigaltstack
+    section: signal
+  - syscall: signalfd4
+    planned_contract_probe: signalfd4_einval
+    suggested_case: invalid mask/fd -> EINVAL/EBADF
+    probe_pattern: special
+    handler: sys_signalfd4
+    section: signal file descriptors
+  - syscall: tgkill
+    planned_contract_probe: tgkill_linux_contract_p1
+    suggested_case: pick minimal errno oracle case per man 2
+    probe_pattern: tbd_errno
+    handler: sys_tgkill
+    section: signal
+  - syscall: tkill
+    planned_contract_probe: tkill_linux_contract_p1
+    suggested_case: pick minimal errno oracle case per man 2
+    probe_pattern: tbd_errno
+    handler: sys_tkill
+    section: signal
+- id: B14-sys
+  title: B14 Sys
+  syscall_count: 14
+  syscalls:
+  - syscall: getegid
+    planned_contract_probe: getegid_linux_contract_p1
+    suggested_case: pick minimal errno oracle case per man 2
+    probe_pattern: tbd_errno
+    handler: sys_getegid
+    section: sys
+  - syscall: geteuid
+    planned_contract_probe: geteuid_linux_contract_p1
+    suggested_case: pick minimal errno oracle case per man 2
+    probe_pattern: tbd_errno
+    handler: sys_geteuid
+    section: sys
+  - syscall: getgid
+    planned_contract_probe: getgid_linux_contract_p1
+    suggested_case: pick minimal errno oracle case per man 2
+    probe_pattern: tbd_errno
+    handler: sys_getgid
+    section: sys
+  - syscall: getgroups
+    planned_contract_probe: getgroups_linux_contract_p1
+    suggested_case: pick minimal errno oracle case per man 2
+    probe_pattern: tbd_errno
+    handler: sys_getgroups
+    section: sys
+  - syscall: getrandom
+    planned_contract_probe: getrandom_linux_contract_p1
+    suggested_case: pick minimal errno oracle case per man 2
+    probe_pattern: tbd_errno
+    handler: sys_getrandom
+    section: sys
+  - syscall: getuid
+    planned_contract_probe: getuid_linux_contract_p1
+    suggested_case: pick minimal errno oracle case per man 2
+    probe_pattern: tbd_errno
+    handler: sys_getuid
+    section: sys
+  - syscall: riscv_flush_icache
+    planned_contract_probe: riscv_flush_icache_einval
+    suggested_case: NULL range -> EINVAL/EFAULT
+    probe_pattern: special
+    handler: sys_riscv_flush_icache
+    section: sys
+  - syscall: seccomp
+    planned_contract_probe: seccomp_einval
+    suggested_case: invalid op -> EINVAL
+    probe_pattern: special
+    handler: sys_seccomp
+    section: sys
+  - syscall: setgid
+    planned_contract_probe: setgid_linux_contract_p1
+    suggested_case: pick minimal errno oracle case per man 2
+    probe_pattern: tbd_errno
+    handler: sys_setgid
+    section: sys
+  - syscall: setgroups
+    planned_contract_probe: setgroups_linux_contract_p1
+    suggested_case: pick minimal errno oracle case per man 2
+    probe_pattern: tbd_errno
+    handler: sys_setgroups
+    section: sys
+  - syscall: setuid
+    planned_contract_probe: setuid_linux_contract_p1
+    suggested_case: pick minimal errno oracle case per man 2
+    probe_pattern: tbd_errno
+    handler: sys_setuid
+    section: sys
+  - syscall: sysinfo
+    planned_contract_probe: sysinfo_linux_contract_p1
+    suggested_case: pick minimal errno oracle case per man 2
+    probe_pattern: tbd_errno
+    handler: sys_sysinfo
+    section: sys
+  - syscall: syslog
+    planned_contract_probe: syslog_bad_type
+    suggested_case: invalid type -> EINVAL
+    probe_pattern: special
+    handler: sys_syslog
+    section: sys
+  - syscall: uname
+    planned_contract_probe: uname_linux_contract_p1
+    suggested_case: pick minimal errno oracle case per man 2
+    probe_pattern: tbd_errno
+    handler: sys_uname
+    section: sys
+- id: B15-time
+  title: B15 Time
+  syscall_count: 5
+  syscalls:
+  - syscall: clock_getres
+    planned_contract_probe: clock_getres_null_ptr_efault
+    suggested_case: NULL result struct -> EFAULT (errno=14)
+    probe_pattern: errno_efault_null
+    handler: sys_clock_getres
+    section: time
+  - syscall: getitimer
+    planned_contract_probe: getitimer_null_ptr_efault
+    suggested_case: NULL result struct -> EFAULT (errno=14)
+    probe_pattern: errno_efault_null
+    handler: sys_getitimer
+    section: time
+  - syscall: gettimeofday
+    planned_contract_probe: gettimeofday_null_ptr_efault
+    suggested_case: NULL result struct -> EFAULT (errno=14)
+    probe_pattern: errno_efault_null
+    handler: sys_gettimeofday
+    section: time
+  - syscall: setitimer
+    planned_contract_probe: setitimer_null_ptr_efault
+    suggested_case: NULL result struct -> EFAULT (errno=14)
+    probe_pattern: errno_efault_null
+    handler: sys_setitimer
+    section: time
+  - syscall: times
+    planned_contract_probe: times_linux_contract_p1
+    suggested_case: pick minimal errno oracle case per man 2
+    probe_pattern: tbd_errno
+    handler: sys_times
+    section: time
+- id: B16-sync
+  title: B16 Sync
+  syscall_count: 1
+  syscalls:
+  - syscall: membarrier
+    planned_contract_probe: membarrier_einval
+    suggested_case: invalid cmd -> EINVAL
+    probe_pattern: special
+    handler: sys_membarrier
+    section: sync
+- id: B17-ipc
+  title: B17 Ipc
+  syscall_count: 8
+  syscalls:
+  - syscall: msgctl
+    planned_contract_probe: msgctl_badid
+    suggested_case: invalid msqid
+    probe_pattern: special
+    handler: sys_msgctl
+    section: msg
+  - syscall: msgget
+    planned_contract_probe: msgget_einval
+    suggested_case: invalid key/flags
+    probe_pattern: special
+    handler: sys_msgget
+    section: msg
+  - syscall: msgrcv
+    planned_contract_probe: msgrcv_badid
+    suggested_case: invalid msqid
+    probe_pattern: special
+    handler: sys_msgrcv
+    section: msg
+  - syscall: msgsnd
+    planned_contract_probe: msgsnd_badid
+    suggested_case: invalid msqid -> EINVAL/EIDRM
+    probe_pattern: special
+    handler: sys_msgsnd
+    section: msg
+  - syscall: shmat
+    planned_contract_probe: shmat_badid
+    suggested_case: invalid shmid
+    probe_pattern: special
+    handler: sys_shmat
+    section: shm
+  - syscall: shmctl
+    planned_contract_probe: shmctl_badid
+    suggested_case: invalid shmid
+    probe_pattern: special
+    handler: sys_shmctl
+    section: shm
+  - syscall: shmdt
+    planned_contract_probe: shmdt_einval
+    suggested_case: invalid addr -> EINVAL
+    probe_pattern: special
+    handler: sys_shmdt
+    section: shm
+  - syscall: shmget
+    planned_contract_probe: shmget_einval
+    suggested_case: invalid size/key
+    probe_pattern: special
+    handler: sys_shmget
+    section: shm
+- id: B18-net
+  title: B18 Net
+  syscall_count: 16
+  syscalls:
+  - syscall: accept
+    planned_contract_probe: accept_badfd
+    suggested_case: fd=-1 -> EBADF (errno=9)
+    probe_pattern: errno_badfd
+    handler: sys_accept
+    section: net
+  - syscall: accept4
+    planned_contract_probe: accept4_badfd
+    suggested_case: fd=-1 -> EBADF (errno=9)
+    probe_pattern: errno_badfd
+    handler: sys_accept4
+    section: net
+  - syscall: bind
+    planned_contract_probe: bind_badfd
+    suggested_case: sockfd=-1 -> EBADF
+    probe_pattern: special
+    handler: sys_bind
+    section: net
+  - syscall: connect
+    planned_contract_probe: connect_badfd
+    suggested_case: sockfd=-1 -> EBADF
+    probe_pattern: special
+    handler: sys_connect
+    section: net
+  - syscall: getpeername
+    planned_contract_probe: getpeername_badfd
+    suggested_case: fd=-1 -> EBADF (errno=9)
+    probe_pattern: errno_badfd
+    handler: sys_getpeername
+    section: net
+  - syscall: getsockname
+    planned_contract_probe: getsockname_badfd
+    suggested_case: fd=-1 -> EBADF (errno=9)
+    probe_pattern: errno_badfd
+    handler: sys_getsockname
+    section: net
+  - syscall: getsockopt
+    planned_contract_probe: getsockopt_badfd
+    suggested_case: fd=-1 -> EBADF (errno=9)
+    probe_pattern: errno_badfd
+    handler: sys_getsockopt
+    section: net
+  - syscall: listen
+    planned_contract_probe: listen_badfd
+    suggested_case: fd=-1 -> EBADF (errno=9)
+    probe_pattern: errno_badfd
+    handler: sys_listen
+    section: net
+  - syscall: recvfrom
+    planned_contract_probe: recvfrom_badfd
+    suggested_case: fd=-1 -> EBADF (errno=9)
+    probe_pattern: errno_badfd
+    handler: sys_recvfrom
+    section: net
+  - syscall: recvmsg
+    planned_contract_probe: recvmsg_badfd
+    suggested_case: fd=-1 -> EBADF (errno=9)
+    probe_pattern: errno_badfd
+    handler: sys_recvmsg
+    section: net
+  - syscall: sendmsg
+    planned_contract_probe: sendmsg_badfd
+    suggested_case: fd=-1 -> EBADF (errno=9)
+    probe_pattern: errno_badfd
+    handler: sys_sendmsg
+    section: net
+  - syscall: sendto
+    planned_contract_probe: sendto_badfd
+    suggested_case: fd=-1 -> EBADF (errno=9)
+    probe_pattern: errno_badfd
+    handler: sys_sendto
+    section: net
+  - syscall: setsockopt
+    planned_contract_probe: setsockopt_badfd
+    suggested_case: fd=-1 -> EBADF (errno=9)
+    probe_pattern: errno_badfd
+    handler: sys_setsockopt
+    section: net
+  - syscall: shutdown
+    planned_contract_probe: shutdown_badfd
+    suggested_case: fd=-1 -> EBADF (errno=9)
+    probe_pattern: errno_badfd
+    handler: sys_shutdown
+    section: net
+  - syscall: socket
+    planned_contract_probe: socket_invalid_domain
+    suggested_case: invalid socket domain -> EINVAL/EAFNOSUPPORT
+    probe_pattern: special
+    handler: sys_socket
+    section: net
+  - syscall: socketpair
+    planned_contract_probe: socketpair_einval
+    suggested_case: invalid family -> EINVAL
+    probe_pattern: special
+    handler: sys_socketpair
+    section: net
+- id: B19-stubs
+  title: B19 Stubs
+  syscall_count: 14
+  syscalls:
+  - syscall: bpf
+    planned_contract_probe: bpf_stub_semantics
+    suggested_case: dummy fd
+    probe_pattern: special
+    handler: sys_dummy_fd
+    section: dummy fds
+  - syscall: fanotify_init
+    planned_contract_probe: fanotify_init_stub_semantics
+    suggested_case: dummy fd
+    probe_pattern: special
+    handler: sys_dummy_fd
+    section: dummy fds
+  - syscall: fsopen
+    planned_contract_probe: fsopen_stub_semantics
+    suggested_case: dummy fd
+    probe_pattern: special
+    handler: sys_dummy_fd
+    section: dummy fds
+  - syscall: fspick
+    planned_contract_probe: fspick_stub_semantics
+    suggested_case: dummy fd
+    probe_pattern: special
+    handler: sys_dummy_fd
+    section: dummy fds
+  - syscall: inotify_init1
+    planned_contract_probe: inotify_init1_stub_semantics
+    suggested_case: dummy fd
+    probe_pattern: special
+    handler: sys_dummy_fd
+    section: dummy fds
+  - syscall: io_uring_setup
+    planned_contract_probe: io_uring_setup_stub_semantics
+    suggested_case: dummy fd
+    probe_pattern: special
+    handler: sys_dummy_fd
+    section: dummy fds
+  - syscall: memfd_secret
+    planned_contract_probe: memfd_secret_stub_semantics
+    suggested_case: dummy fd
+    probe_pattern: special
+    handler: sys_dummy_fd
+    section: dummy fds
+  - syscall: open_tree
+    planned_contract_probe: open_tree_stub_semantics
+    suggested_case: dummy fd
+    probe_pattern: special
+    handler: sys_dummy_fd
+    section: dummy fds
+  - syscall: perf_event_open
+    planned_contract_probe: perf_event_open_stub_semantics
+    suggested_case: dummy fd
+    probe_pattern: special
+    handler: sys_dummy_fd
+    section: dummy fds
+  - syscall: timer_create
+    planned_contract_probe: timer_create_noop_semantics
+    suggested_case: Ok(0) vs Linux timer_create
+    probe_pattern: special
+    handler: Ok(0)
+    section: dummy fds
+  - syscall: timer_gettime
+    planned_contract_probe: timer_gettime_noop_semantics
+    suggested_case: Ok(0) stub
+    probe_pattern: special
+    handler: Ok(0)
+    section: dummy fds
+  - syscall: timer_settime
+    planned_contract_probe: timer_settime_noop_semantics
+    suggested_case: Ok(0) stub
+    probe_pattern: special
+    handler: Ok(0)
+    section: dummy fds
+  - syscall: timerfd_create
+    planned_contract_probe: timerfd_create_stub_semantics
+    suggested_case: Starry dummy fd vs Linux
+    probe_pattern: special
+    handler: sys_dummy_fd
+    section: dummy fds
+  - syscall: userfaultfd
+    planned_contract_probe: userfaultfd_stub_semantics
+    suggested_case: dummy fd
+    probe_pattern: special
+    handler: sys_dummy_fd
+    section: dummy fds

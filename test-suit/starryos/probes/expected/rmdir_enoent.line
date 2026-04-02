@@ -1,0 +1,1 @@
+CASE rmdir.enoent ret=-1 errno=2 note=handwritten

@@ -177,7 +177,7 @@ def write_behavior_table(
         "",
         "由 `scripts/render_starry_syscall_inventory.py --step 3` 生成。",
         "",
-        "- **matrix_probe**：兼容矩阵 [docs/starryos-syscall-compat-matrix.yaml](docs/starryos-syscall-compat-matrix.yaml) 中的 `contract_probe`（主行）。",
+        "- **matrix_probe**：矩阵 `contract_probe`；若仅有脚手架则显示 `(planned) …`（来自 `planned_contract_probe`，见 [docs/starryos-syscall-probe-rollout.yaml](docs/starryos-syscall-probe-rollout.yaml)）。",
         "- **catalog_probes**：catalog `tests:` 中的 contract 文件名（不含路径）。",
         "- **matrix_parity**：矩阵 `parity`（无行则为 —）。",
         "",
@@ -195,8 +195,14 @@ def write_behavior_table(
         h = handlers.get(name, "")
         mat = matrix.get(name)
         parity = str(mat.get("parity", "")) if mat else "—"
-        mprobe = str(mat.get("contract_probe", "") or "").strip() if mat else ""
-        mprobe = mprobe or "—"
+        cprobe = str(mat.get("contract_probe", "") or "").strip() if mat else ""
+        pprobe = str(mat.get("planned_contract_probe", "") or "").strip() if mat else ""
+        if cprobe:
+            mprobe = cprobe
+        elif pprobe:
+            mprobe = f"(planned) {pprobe}"
+        else:
+            mprobe = "—"
         cat = catalog.get(name)
         cprobes = probe_basenames_from_catalog_tests(cat.get("tests") if cat else [])
         lines.append(
