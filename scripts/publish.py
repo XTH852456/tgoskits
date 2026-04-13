@@ -42,6 +42,10 @@ DEFAULT_CHECK_OWNERS = [
     "github:arceos-org:core",
     "equation314",
 ]
+RATE_LIMIT_MARKERS = [
+    "status 429 Too Many Requests",
+    "You have published too many new crates in a short period of time",
+]
 
 
 @dataclass(frozen=True)
@@ -50,6 +54,7 @@ class Package:
     version: str
     manifest_path: Path
     package_id: str
+    workspace_root: Path
     publish: Any
     dependencies: list[dict[str, Any]]
 
@@ -133,6 +138,7 @@ def collect_packages(metadata_sets: list[dict[str, Any]], root: Path) -> dict[st
                     version=pkg["version"],
                     manifest_path=manifest_path,
                     package_id=package_key,
+                    workspace_root=normalize_path(metadata["workspace_root"]),
                     publish=publish,
                     dependencies=pkg.get("dependencies", []),
                 ),
@@ -206,6 +212,31 @@ def topo_sort(graph: dict[str, set[str]]) -> list[str]:
         raise SystemExit(f"cyclic internal dependency graph detected: {unresolved}")
 
     return order
+
+
+def workspace_external_registry_blockers(
+    packages: dict[str, Package],
+    repo_root: Path,
+) -> dict[Path, set[str]]:
+    name_to_ids = package_name_index(packages)
+    blockers: dict[Path, set[str]] = defaultdict(set)
+
+    for package_id, pkg in packages.items():
+        if pkg.workspace_root == repo_root:
+            continue
+        for dep in pkg.dependencies:
+            if dep.get("path"):
+                continue
+            matching_ids = name_to_ids.get(dep["name"], [])
+            if len(matching_ids) != 1:
+                continue
+            dep_id = matching_ids[0]
+            dep_pkg = packages[dep_id]
+            if dep_pkg.workspace_root == pkg.workspace_root:
+                continue
+            blockers[pkg.workspace_root].add(dep_id)
+
+    return blockers
 
 
 def crates_io_has_version(crate: str, version: str, timeout: float = 15.0) -> bool:
@@ -341,6 +372,8 @@ def publish_package(pkg: Package, dry_run: bool) -> tuple[str, str]:
     stderr = proc.stderr.strip()
     stdout = proc.stdout.strip()
     detail = stderr or stdout or f"exit code {proc.returncode}"
+    if any(marker in detail for marker in RATE_LIMIT_MARKERS):
+        return "RATE-LIMITED", detail
     return "FAILED", detail
 
 
@@ -414,6 +447,7 @@ def main() -> int:
 
     graph = build_dependency_graph(packages)
     order = topo_sort(graph)
+    workspace_blockers = workspace_external_registry_blockers(packages, Path.cwd().resolve())
 
     if args.check:
         any_failed = False
@@ -441,48 +475,90 @@ def main() -> int:
         return 1 if any_failed else 0
 
     print(f"selected {len(order)} package(s) under {root}")
-    print("publish order:")
+    print("initial candidate order (packages may be deferred until prerequisites are published):")
     for index, package_id in enumerate(order, start=1):
         pkg = packages[package_id]
         print(f"  {index}. {pkg.name} {pkg.version} ({pkg.rel_dir})")
     print()
 
     any_failed = False
-    for index, package_id in enumerate(order, start=1):
-        pkg = packages[package_id]
-        prefix = f"[{index}/{len(order)}] {pkg.name} {pkg.version} ({pkg.rel_dir})"
-        package_failed = False
-        crate_exists = False
-        has_version = False
-        try:
-            if args.check:
-                crate_exists = crates_io_has_crate(pkg.name)
-            has_version = crates_io_has_version(pkg.name, pkg.version)
-            if has_version:
-                print(f"{prefix} -> SKIP already exists on crates.io")
-            elif args.check and crate_exists:
-                print(f"{prefix} -> CHECK INFO crate exists, current version not published")
-            elif args.check:
-                print(f"{prefix} -> CHECK SKIP crate not published on crates.io")
-            else:
-                status, detail = publish_package(pkg, args.dry_run)
-                if status == "FAILED":
-                    any_failed = True
-                    package_failed = True
-                print(f"{prefix} -> {status} {detail}")
-        except Exception as exc:  # noqa: BLE001
-            any_failed = True
-            package_failed = True
-            print(f"{prefix} -> FAILED crates.io check: {exc}")
-            continue
+    ready_packages: set[str] = set()
+    pending = list(order)
+    completed_count = 0
 
-        if package_failed or not owners or not has_version:
-            continue
+    while pending:
+        next_pending: list[str] = []
+        progress = False
 
-        owner_status, owner_detail = sync_owners(pkg.name, owners, args.dry_run)
-        if owner_status == "FAILED":
-            any_failed = True
-        print(f"{prefix} -> OWNER {owner_status} {owner_detail}")
+        for package_id in pending:
+            pkg = packages[package_id]
+            blockers = graph[package_id] | workspace_blockers.get(pkg.workspace_root, set())
+            unmet = [dep_id for dep_id in blockers if dep_id not in ready_packages]
+            if unmet:
+                next_pending.append(package_id)
+                continue
+
+            completed_count += 1
+            progress = True
+            prefix = f"[{completed_count}/{len(order)}] {pkg.name} {pkg.version} ({pkg.rel_dir})"
+            package_failed = False
+            crate_exists = False
+            has_version = False
+            should_sync_owner = False
+            try:
+                if args.check:
+                    crate_exists = crates_io_has_crate(pkg.name)
+                has_version = crates_io_has_version(pkg.name, pkg.version)
+                if has_version:
+                    print(f"{prefix} -> SKIP already exists on crates.io")
+                    ready_packages.add(package_id)
+                elif args.check and crate_exists:
+                    print(f"{prefix} -> CHECK INFO crate exists, current version not published")
+                elif args.check:
+                    print(f"{prefix} -> CHECK SKIP crate not published on crates.io")
+                else:
+                    status, detail = publish_package(pkg, args.dry_run)
+                    if status == "FAILED":
+                        any_failed = True
+                        package_failed = True
+                    elif status == "RATE-LIMITED":
+                        print(f"{prefix} -> {status} {detail}")
+                        raise SystemExit(
+                            "crates.io rate limit reached; stop now and retry after the "
+                            "timestamp reported above"
+                        )
+                    elif status in {"PUBLISHED", "DRY-RUN"}:
+                        should_sync_owner = True
+                        ready_packages.add(package_id)
+                    print(f"{prefix} -> {status} {detail}")
+            except Exception as exc:  # noqa: BLE001
+                any_failed = True
+                package_failed = True
+                print(f"{prefix} -> FAILED crates.io check: {exc}")
+                continue
+
+            if package_failed or not owners or not should_sync_owner:
+                continue
+
+            owner_status, owner_detail = sync_owners(pkg.name, owners, args.dry_run)
+            if owner_status == "FAILED":
+                any_failed = True
+            print(f"{prefix} -> OWNER {owner_status} {owner_detail}")
+
+        if not next_pending:
+            break
+
+        if not progress:
+            unresolved = ", ".join(
+                f"{packages[package_id].name} ({packages[package_id].rel_dir})"
+                for package_id in next_pending
+            )
+            raise SystemExit(
+                "unable to make publishing progress; unresolved prerequisites for: "
+                + unresolved
+            )
+
+        pending = next_pending
 
     return 1 if any_failed else 0
 
