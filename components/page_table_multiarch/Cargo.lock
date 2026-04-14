@@ -18,23 +18,44 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7c02d123df017efcdfbd739ef81735b36c5ba83ec3c59c80a9d7ecc718f92e50"
 
 [[package]]
-name = "axerrno"
-version = "0.1.2"
+name = "ax-errno"
+version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4a88b1fa2ce97a6ff4ce31ba9fda3065730ca4d77a1ba50dec000fc04f1fb686"
-dependencies = [
- "axerrno 0.2.2",
- "log",
-]
-
-[[package]]
-name = "axerrno"
-version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f961d2868582a092fb1e71b90c16cc6f2cbbe7bb5fa7e4bd6fe61d882ce6bb34"
+checksum = "031e1d5a0a708c88de6fff32c4f2774903b140561ad63833a2e674148b1809d9"
 dependencies = [
  "log",
  "strum",
+]
+
+[[package]]
+name = "ax-memory-addr"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b4aa7cb2090af22db22b759c943666926548085077c7c74402bbbd5db09fcced"
+
+[[package]]
+name = "ax-page-table-entry"
+version = "0.8.1"
+dependencies = [
+ "aarch64-cpu",
+ "ax-memory-addr",
+ "bitflags 2.10.0",
+ "x86_64",
+]
+
+[[package]]
+name = "ax-page-table-multiarch"
+version = "0.8.1"
+dependencies = [
+ "arrayvec",
+ "ax-errno",
+ "ax-memory-addr",
+ "ax-page-table-entry",
+ "bitmaps",
+ "log",
+ "rand",
+ "riscv",
+ "x86",
 ]
 
 [[package]]
@@ -90,37 +111,6 @@ name = "log"
 version = "0.4.29"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5e5032e24019045c762d3c0f28f5b6b8bbf38563a65908389bf7978758920897"
-
-[[package]]
-name = "memory_addr"
-version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b1f0625c50adb5f6aaf47f05cae3c4dbc13a74c659241b06c4576f3d7e1da940"
-
-[[package]]
-name = "page_table_entry"
-version = "0.6.1"
-dependencies = [
- "aarch64-cpu",
- "bitflags 2.10.0",
- "memory_addr",
- "x86_64",
-]
-
-[[package]]
-name = "page_table_multiarch"
-version = "0.6.1"
-dependencies = [
- "arrayvec",
- "axerrno 0.1.2",
- "bitmaps",
- "log",
- "memory_addr",
- "page_table_entry",
- "rand",
- "riscv",
- "x86",
-]
 
 [[package]]
 name = "paste"

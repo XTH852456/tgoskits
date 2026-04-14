@@ -38,6 +38,7 @@ members = [
     "components/axvmconfig",
     "components/cap_access",
     "components/cpumask",
+    "components/fxmac_rs",
     "components/handler_table",
     "components/int_ratio",
     "components/kernel_guard",
