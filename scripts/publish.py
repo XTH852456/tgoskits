@@ -482,46 +482,13 @@ def topo_sort(graph: dict[str, set[str]]) -> list[str]:
     return order
 
 
-def workspace_external_registry_blockers(
-    packages: dict[str, Package],
-    repo_root: Path,
-) -> dict[Path, set[str]]:
-    name_to_ids = package_name_index(packages)
-    path_to_id = {
-        str(pkg.manifest_path.parent.resolve()): package_id
-        for package_id, pkg in packages.items()
-    }
-    blockers: dict[Path, set[str]] = defaultdict(set)
-
-    for package_id, pkg in packages.items():
-        if pkg.workspace_root == repo_root:
-            continue
-        for dep in pkg.dependencies:
-            dep_id = None
-            dep_path = dep.get("path")
-            if dep_path:
-                dep_id = path_to_id.get(str(normalize_path(dep_path)))
-            if dep_id is None:
-                matching_ids = name_to_ids.get(dep["name"], [])
-                if len(matching_ids) != 1:
-                    continue
-                dep_id = matching_ids[0]
-            dep_pkg = packages[dep_id]
-            if dep_pkg.workspace_root == pkg.workspace_root:
-                continue
-            blockers[pkg.workspace_root].add(dep_id)
-
-    return blockers
-
-
 def package_blockers(
     package_id: str,
     packages: dict[str, Package],
     graph: dict[str, set[str]],
     workspace_blockers: dict[Path, set[str]],
 ) -> set[str]:
-    pkg = packages[package_id]
-    return graph[package_id] | workspace_blockers.get(pkg.workspace_root, set())
+    return graph[package_id]
 
 
 def summarize_failure_detail(detail: str) -> str:
@@ -813,8 +780,8 @@ def run_publish_command(pkg: Package, *, locked: bool) -> subprocess.CompletedPr
     cmd = [
         "cargo",
         "publish",
-        "--manifest-path",
-        str(pkg.manifest_path),
+        "-p",
+        pkg.name,
     ]
     if locked:
         cmd.append("--locked")
@@ -923,7 +890,7 @@ def main() -> int:
 
     graph = build_dependency_graph(packages)
     order = topo_sort(graph)
-    workspace_blockers = workspace_external_registry_blockers(packages, Path.cwd().resolve())
+    workspace_blockers: dict[Path, set[str]] = {}
 
     if args.check:
         any_failed = False
@@ -970,7 +937,7 @@ def main() -> int:
 
         for package_id in pending:
             pkg = packages[package_id]
-            blockers = graph[package_id] | workspace_blockers.get(pkg.workspace_root, set())
+            blockers = graph[package_id]
             unmet = [dep_id for dep_id in blockers if dep_id not in ready_packages]
             if unmet:
                 next_pending.append(package_id)
