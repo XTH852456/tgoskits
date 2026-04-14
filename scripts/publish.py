@@ -24,13 +24,17 @@ from __future__ import annotations
 import argparse
 import io
 import json
+import math
 import os
+import re
 import ssl
 import subprocess
 import sys
 import tarfile
 import time
 import tomllib
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from urllib.parse import urlparse
 import urllib.error
 import urllib.parse
@@ -50,10 +54,15 @@ RATE_LIMIT_MARKERS = [
     "status 429 Too Many Requests",
     "You have published too many new crates in a short period of time",
 ]
+RATE_LIMIT_RETRY_AFTER_RE = re.compile(
+    r"Please try again after (?P<retry_after>.+?)(?: and see|$)"
+)
 LOCKED_FAILURE_MARKERS = [
     "because --locked was passed",
 ]
 PUBLISH_INTERVAL_SECONDS = 60
+DEFAULT_RATE_LIMIT_WAIT_SECONDS = 10 * 60
+RATE_LIMIT_WAIT_BUFFER_SECONDS = 5
 CRATES_IO_RETRY_ATTEMPTS = 3
 CRATES_IO_RETRY_DELAY_SECONDS = 2.0
 EXCLUDED_SUBTREES = (
@@ -498,6 +507,52 @@ def summarize_failure_detail(detail: str) -> str:
     if not lines:
         return detail.strip() or "failed"
     return lines[-1]
+
+
+def parse_rate_limit_retry_after(detail: str) -> datetime | None:
+    match = RATE_LIMIT_RETRY_AFTER_RE.search(detail)
+    if match is None:
+        return None
+
+    retry_after = match.group("retry_after").strip()
+    if not retry_after:
+        return None
+
+    try:
+        retry_at = parsedate_to_datetime(retry_after)
+    except (TypeError, ValueError, IndexError):
+        return None
+
+    if retry_at.tzinfo is None:
+        retry_at = retry_at.replace(tzinfo=timezone.utc)
+    return retry_at.astimezone(timezone.utc)
+
+
+def rate_limit_wait_seconds(detail: str) -> tuple[int, str | None]:
+    retry_at = parse_rate_limit_retry_after(detail)
+    if retry_at is None:
+        return DEFAULT_RATE_LIMIT_WAIT_SECONDS, None
+
+    wait_seconds = math.ceil(
+        (retry_at - datetime.now(timezone.utc)).total_seconds()
+        + RATE_LIMIT_WAIT_BUFFER_SECONDS
+    )
+    wait_seconds = max(wait_seconds, 1)
+    return wait_seconds, retry_at.strftime("%Y-%m-%d %H:%M:%S %Z")
+
+
+def format_wait_duration(wait_seconds: int) -> str:
+    minutes, seconds = divmod(wait_seconds, 60)
+    hours, minutes = divmod(minutes, 60)
+
+    parts: list[str] = []
+    if hours:
+        parts.append(f"{hours}h")
+    if minutes:
+        parts.append(f"{minutes}m")
+    if seconds or not parts:
+        parts.append(f"{seconds}s")
+    return " ".join(parts)
 
 
 def canonical_crate_name(name: str) -> str:
@@ -1113,19 +1168,32 @@ def main() -> int:
                             f"{prefix} -> WAIT {PUBLISH_INTERVAL_SECONDS}s before publish"
                         )
                         time.sleep(PUBLISH_INTERVAL_SECONDS)
-                    status, detail = publish_package(pkg, args.dry_run)
-                    if not args.dry_run:
-                        publish_attempts += 1
+                    while True:
+                        status, detail = publish_package(pkg, args.dry_run)
+                        if not args.dry_run:
+                            publish_attempts += 1
+                        if status != "RATE-LIMITED":
+                            break
+
+                        print(f"{prefix} -> {status} {detail}")
+                        wait_seconds, retry_after = rate_limit_wait_seconds(detail)
+                        wait_detail = format_wait_duration(wait_seconds)
+                        if retry_after is None:
+                            print(
+                                f"{prefix} -> WAIT {wait_detail} for crates.io rate limit reset "
+                                "(default backoff)"
+                            )
+                        else:
+                            print(
+                                f"{prefix} -> WAIT {wait_detail} for crates.io rate limit reset "
+                                f"(retry after {retry_after})"
+                            )
+                        time.sleep(wait_seconds)
+
                     if status == "FAILED":
                         any_failed = True
                         package_failed = True
                         failed_packages[package_id] = detail
-                    elif status == "RATE-LIMITED":
-                        print(f"{prefix} -> {status} {detail}")
-                        raise SystemExit(
-                            "crates.io rate limit reached; stop now and retry after the "
-                            "timestamp reported above"
-                        )
                     elif status in {"PUBLISHED", "DRY-RUN"}:
                         should_sync_owner = True
                         ready_packages.add(package_id)
