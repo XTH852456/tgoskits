@@ -157,16 +157,7 @@ jobs:
 
   release_plz_pr_dev:
     name: Prepare release-plz PR for dev
-    if: >-
-      ${{
-        always()
-        && needs.test_std.result == 'success'
-        && needs.test_qemu_matrix.result == 'success'
-        && (needs.test_axvisor_self_hosted.result == 'success' || needs.test_axvisor_self_hosted.result == 'skipped')
-        && github.event_name == 'push'
-        && github.ref_name == 'dev'
-        && github.repository_owner == 'rcore-os'
-      }}
+    if: false
     needs:
       - test_std
       - test_qemu_matrix
