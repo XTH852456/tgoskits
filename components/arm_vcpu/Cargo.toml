@@ -28,7 +28,7 @@ numeric-enum-macro = "0.2"
 ax-errno = "0.4.2"
 ax-percpu = { version = "0.4.3", features = ["arm-el2"] }
 
-axaddrspace = "0.5.0"
+axaddrspace = "0.5.1"
 axdevice_base = "0.4.2"
 axvcpu = "0.5.0"
 axvisor_api = "0.5.0"

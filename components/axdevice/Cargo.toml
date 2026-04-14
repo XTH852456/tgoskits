@@ -24,7 +24,7 @@ ax-errno = "0.4.2"
 ax-memory-addr = "0.6.1"
 
 axvmconfig = { version = "0.4.2", default-features = false }
-axaddrspace = "0.5.0"
+axaddrspace = "0.5.1"
 axdevice_base = "0.4.2"
 range-alloc-arceos = "0.3.4"
 

@@ -21,6 +21,6 @@ bit = "0.1.1"
 ax-memory-addr = "0.6.1"
 ax-errno = "0.4.2"
 
-axaddrspace = "0.5.0"
+axaddrspace = "0.5.1"
 axdevice_base = "0.4.2"
 axvisor_api = "0.5.0"

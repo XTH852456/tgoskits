@@ -320,7 +320,7 @@ ax-sync = { path = "os/arceos/modules/axsync", version = "0.5.0" }
 ax-task = { path = "os/arceos/modules/axtask", version = "0.5.0" }
 
 # === components (actual versions) ===
-axaddrspace = { path = "components/axaddrspace", version = "0.5.0" }
+axaddrspace = { path = "components/axaddrspace", version = "0.5.1" }
 ax-allocator = { path = "components/axallocator", version = "0.4.0" }
 axbacktrace = { path = "components/axbacktrace", version = "0.3.3" }
 axdevice = { path = "components/axdevice", version = "0.4.2" }

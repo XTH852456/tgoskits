@@ -30,7 +30,7 @@ ax-percpu = { version = "0.4.3", features = ["arm-el2"] }
 
 # System dependent modules provided by ArceOS-Hypervisor.
 axvcpu = "0.5.0"
-axaddrspace = "0.5.0"
+axaddrspace = "0.5.1"
 axvisor_api = "0.5.0"
 axdevice = "0.4.2"
 axdevice_base = "0.4.2"
