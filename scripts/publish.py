@@ -142,6 +142,13 @@ def is_excluded_path(path: Path, repo_root: Path) -> bool:
     )
 
 
+def package_workspace_root(manifest_path: Path) -> Path:
+    workspace_manifest = find_enclosing_workspace_manifest(manifest_path)
+    if workspace_manifest is None:
+        return manifest_path.parent.resolve()
+    return workspace_manifest.parent.resolve()
+
+
 def discover_workspace_manifests(search_root: Path) -> list[Path]:
     manifests: list[Path] = []
     for manifest in discover_cargo_manifests(search_root):
@@ -270,7 +277,12 @@ def package_from_manifest(
 
     workspace_data = cargo_toml_data(workspace_manifest) if workspace_manifest else {}
 
-    publish = package_data.get("publish")
+    publish = resolve_workspace_value(
+        package_data.get("publish"),
+        workspace_data=workspace_data,
+        section="package",
+        name="publish",
+    )
     if publish is False or publish == []:
         return None
 
@@ -347,7 +359,7 @@ def collect_packages(metadata_sets: list[dict[str, Any]], root: Path) -> dict[st
                     version=pkg["version"],
                     manifest_path=manifest_path,
                     package_id=package_key,
-                    workspace_root=normalize_path(metadata["workspace_root"]),
+                    workspace_root=package_workspace_root(manifest_path),
                     publish=publish,
                     dependencies=pkg.get("dependencies", []),
                 ),
@@ -469,24 +481,194 @@ def workspace_external_registry_blockers(
     repo_root: Path,
 ) -> dict[Path, set[str]]:
     name_to_ids = package_name_index(packages)
+    path_to_id = {
+        str(pkg.manifest_path.parent.resolve()): package_id
+        for package_id, pkg in packages.items()
+    }
     blockers: dict[Path, set[str]] = defaultdict(set)
 
     for package_id, pkg in packages.items():
         if pkg.workspace_root == repo_root:
             continue
         for dep in pkg.dependencies:
-            if dep.get("path"):
-                continue
-            matching_ids = name_to_ids.get(dep["name"], [])
-            if len(matching_ids) != 1:
-                continue
-            dep_id = matching_ids[0]
+            dep_id = None
+            dep_path = dep.get("path")
+            if dep_path:
+                dep_id = path_to_id.get(str(normalize_path(dep_path)))
+            if dep_id is None:
+                matching_ids = name_to_ids.get(dep["name"], [])
+                if len(matching_ids) != 1:
+                    continue
+                dep_id = matching_ids[0]
             dep_pkg = packages[dep_id]
             if dep_pkg.workspace_root == pkg.workspace_root:
                 continue
             blockers[pkg.workspace_root].add(dep_id)
 
     return blockers
+
+
+def package_blockers(
+    package_id: str,
+    packages: dict[str, Package],
+    graph: dict[str, set[str]],
+    workspace_blockers: dict[Path, set[str]],
+) -> set[str]:
+    pkg = packages[package_id]
+    return graph[package_id] | workspace_blockers.get(pkg.workspace_root, set())
+
+
+def summarize_failure_detail(detail: str) -> str:
+    lines = [line.strip() for line in detail.splitlines() if line.strip()]
+    if not lines:
+        return detail.strip() or "failed"
+    return lines[-1]
+
+
+def pending_unmet_blockers(
+    pending: list[str],
+    ready_packages: set[str],
+    packages: dict[str, Package],
+    graph: dict[str, set[str]],
+    workspace_blockers: dict[Path, set[str]],
+) -> dict[str, set[str]]:
+    unmet_by_pkg: dict[str, set[str]] = {}
+    for package_id in pending:
+        blockers = package_blockers(package_id, packages, graph, workspace_blockers)
+        unmet_by_pkg[package_id] = {dep_id for dep_id in blockers if dep_id not in ready_packages}
+    return unmet_by_pkg
+
+
+def failed_blocking_roots(
+    package_id: str,
+    unmet_by_pkg: dict[str, set[str]],
+    failed_packages: dict[str, str],
+    memo: dict[str, set[str]],
+    visiting: set[str],
+) -> set[str]:
+    cached = memo.get(package_id)
+    if cached is not None:
+        return cached
+    if package_id in visiting:
+        return set()
+
+    visiting.add(package_id)
+    roots: set[str] = set()
+    for dep_id in unmet_by_pkg.get(package_id, set()):
+        if dep_id in failed_packages:
+            roots.add(dep_id)
+        elif dep_id in unmet_by_pkg:
+            roots |= failed_blocking_roots(dep_id, unmet_by_pkg, failed_packages, memo, visiting)
+    visiting.remove(package_id)
+    memo[package_id] = roots
+    return roots
+
+
+def pending_cycle_groups(unmet_by_pkg: dict[str, set[str]]) -> list[list[str]]:
+    pending_set = set(unmet_by_pkg)
+    adjacency = {
+        package_id: [dep_id for dep_id in deps if dep_id in pending_set]
+        for package_id, deps in unmet_by_pkg.items()
+    }
+    index = 0
+    stack: list[str] = []
+    on_stack: set[str] = set()
+    indices: dict[str, int] = {}
+    lowlinks: dict[str, int] = {}
+    groups: list[list[str]] = []
+
+    def strongconnect(node: str) -> None:
+        nonlocal index
+        indices[node] = index
+        lowlinks[node] = index
+        index += 1
+        stack.append(node)
+        on_stack.add(node)
+
+        for neighbor in adjacency[node]:
+            if neighbor not in indices:
+                strongconnect(neighbor)
+                lowlinks[node] = min(lowlinks[node], lowlinks[neighbor])
+            elif neighbor in on_stack:
+                lowlinks[node] = min(lowlinks[node], indices[neighbor])
+
+        if lowlinks[node] != indices[node]:
+            return
+
+        component: list[str] = []
+        while stack:
+            member = stack.pop()
+            on_stack.remove(member)
+            component.append(member)
+            if member == node:
+                break
+        if len(component) > 1:
+            groups.append(sorted(component))
+            return
+        member = component[0]
+        if member in adjacency[member]:
+            groups.append(component)
+
+    for node in adjacency:
+        if node not in indices:
+            strongconnect(node)
+
+    return sorted(groups, key=lambda group: [len(group), [str(item) for item in group]])
+
+
+def stall_message(
+    pending: list[str],
+    ready_packages: set[str],
+    failed_packages: dict[str, str],
+    packages: dict[str, Package],
+    graph: dict[str, set[str]],
+    workspace_blockers: dict[Path, set[str]],
+) -> str:
+    unmet_by_pkg = pending_unmet_blockers(
+        pending, ready_packages, packages, graph, workspace_blockers
+    )
+    lines = ["unable to make publishing progress"]
+
+    failed_impacts: dict[str, list[str]] = defaultdict(list)
+    memo: dict[str, set[str]] = {}
+    for package_id in pending:
+        for root_id in failed_blocking_roots(
+            package_id, unmet_by_pkg, failed_packages, memo, set()
+        ):
+            failed_impacts[root_id].append(package_id)
+
+    if failed_impacts:
+        lines.append("blocked by failed prerequisites:")
+        for root_id in sorted(failed_impacts, key=lambda item: packages[item].name):
+            dependents = sorted(
+                {packages[package_id].name for package_id in failed_impacts[root_id]}
+            )
+            preview = ", ".join(dependents[:8])
+            if len(dependents) > 8:
+                preview += f", ... (+{len(dependents) - 8} more)"
+            root_pkg = packages[root_id]
+            lines.append(
+                f"  - {root_pkg.name} ({root_pkg.rel_dir}): "
+                f"{summarize_failure_detail(failed_packages[root_id])}; blocks {preview}"
+            )
+
+    cycle_groups = pending_cycle_groups(unmet_by_pkg)
+    if cycle_groups:
+        lines.append("remaining dependency cycles:")
+        for group in cycle_groups[:10]:
+            names = ", ".join(packages[package_id].name for package_id in group)
+            lines.append(f"  - {names}")
+        if len(cycle_groups) > 10:
+            lines.append(f"  - ... ({len(cycle_groups) - 10} more cycle groups)")
+
+    if len(lines) == 1:
+        unresolved = ", ".join(
+            f"{packages[package_id].name} ({packages[package_id].rel_dir})"
+            for package_id in pending
+        )
+        lines.append(f"unresolved prerequisites for: {unresolved}")
+
+    return "\n".join(lines)
 
 
 def crates_io_version_status(
@@ -761,6 +943,7 @@ def main() -> int:
 
     any_failed = False
     ready_packages: set[str] = set()
+    failed_packages: dict[str, str] = {}
     pending = list(order)
     completed_count = 0
     publish_attempts = 0
@@ -791,10 +974,12 @@ def main() -> int:
                 if version_status.exists and version_status.yanked:
                     any_failed = True
                     package_failed = True
-                    print(
-                        f"{prefix} -> FAILED version exists on crates.io but is yanked; "
+                    detail = (
+                        "version exists on crates.io but is yanked; "
                         "bump the version or unyank it before publishing dependents"
                     )
+                    failed_packages[package_id] = detail
+                    print(f"{prefix} -> FAILED {detail}")
                 elif version_status.exists:
                     print(f"{prefix} -> SKIP already exists on crates.io")
                     ready_packages.add(package_id)
@@ -814,6 +999,7 @@ def main() -> int:
                     if status == "FAILED":
                         any_failed = True
                         package_failed = True
+                        failed_packages[package_id] = detail
                     elif status == "RATE-LIMITED":
                         print(f"{prefix} -> {status} {detail}")
                         raise SystemExit(
@@ -827,7 +1013,9 @@ def main() -> int:
             except Exception as exc:  # noqa: BLE001
                 any_failed = True
                 package_failed = True
-                print(f"{prefix} -> FAILED crates.io check: {exc}")
+                failed_detail = f"crates.io check failed: {exc}"
+                failed_packages[package_id] = failed_detail
+                print(f"{prefix} -> FAILED {failed_detail}")
                 continue
 
             if package_failed or not owners or not should_sync_owner:
@@ -842,13 +1030,15 @@ def main() -> int:
             break
 
         if not progress:
-            unresolved = ", ".join(
-                f"{packages[package_id].name} ({packages[package_id].rel_dir})"
-                for package_id in next_pending
-            )
             raise SystemExit(
-                "unable to make publishing progress; unresolved prerequisites for: "
-                + unresolved
+                stall_message(
+                    next_pending,
+                    ready_packages,
+                    failed_packages,
+                    packages,
+                    graph,
+                    workspace_blockers,
+                )
             )
 
         pending = next_pending
