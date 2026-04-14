@@ -29,7 +29,7 @@ uspace = []
 arm-el2 = ["ax-page-table-entry/arm-el2"]
 
 [dependencies]
-axbacktrace = "0.3.2"
+axbacktrace = "0.3.3"
 cfg-if = "1.0"
 log = "0.4"
 ax-memory-addr = "0.6.1"

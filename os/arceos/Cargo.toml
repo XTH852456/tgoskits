@@ -97,7 +97,7 @@ ax-sync = { version = "0.5.0", path = "modules/axsync" }
 ax-task = { version = "0.5.0", path = "modules/axtask" }
 
 ax-allocator = { version = "0.4.0", features = ["ax-errno"] }
-axbacktrace = "0.3.2"
+axbacktrace = "0.3.3"
 ax-driver-base = "0.3.4"
 ax-driver-block = "0.3.4"
 ax-driver-display = "0.3.4"
@@ -119,7 +119,7 @@ ax-plat-aarch64-raspi = "0.5.1"
 ax-plat-loongarch64-qemu-virt = "0.5.1"
 ax-plat-riscv64-qemu-virt = "0.5.0"
 ax-plat-x86-pc = "0.5.1"
-axpoll = "0.3.2"
+axpoll = "0.3.3"
 ax-timer-list = "0.3.0"
 bindgen = "0.72"
 buddy-slab-allocator = "0.4"
