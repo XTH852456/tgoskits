@@ -175,31 +175,49 @@ pub fn sys_pwrite64(
     Ok(write as _)
 }
 
+/// Combine pos_l and pos_h into a single offset, matching Linux
+/// `pos_from_hilo`. On 64-bit, pos_h is unused since the full
+/// offset fits in a single register-width argument.
+fn pos_from_hilo(pos_h: usize, pos_l: usize) -> __kernel_off_t {
+    #[cfg(target_pointer_width = "64")]
+    {
+        pos_l as __kernel_off_t
+    }
+    #[cfg(target_pointer_width = "32")]
+    {
+        (((pos_h as i64) << 32) | (pos_l as i64)) as __kernel_off_t
+    }
+}
+
 pub fn sys_preadv(
     fd: c_int,
     iov: *const IoVec,
     iovcnt: usize,
-    offset: __kernel_off_t,
+    pos_l: usize,
+    pos_h: usize,
 ) -> AxResult<isize> {
-    sys_preadv2(fd, iov, iovcnt, offset, 0)
+    sys_preadv2(fd, iov, iovcnt, pos_l, pos_h, 0)
 }
 
 pub fn sys_pwritev(
     fd: c_int,
     iov: *const IoVec,
     iovcnt: usize,
-    offset: __kernel_off_t,
+    pos_l: usize,
+    pos_h: usize,
 ) -> AxResult<isize> {
-    sys_pwritev2(fd, iov, iovcnt, offset, 0)
+    sys_pwritev2(fd, iov, iovcnt, pos_l, pos_h, 0)
 }
 
 pub fn sys_preadv2(
     fd: c_int,
     iov: *const IoVec,
     iovcnt: usize,
-    offset: __kernel_off_t,
+    pos_l: usize,
+    pos_h: usize,
     _flags: u32,
 ) -> AxResult<isize> {
+    let offset = pos_from_hilo(pos_h, pos_l);
     debug!("sys_preadv2 <= fd: {fd}, iovcnt: {iovcnt}, offset: {offset}, flags: {_flags}");
     let f = File::from_fd(fd)?;
     f.inner()
@@ -211,13 +229,15 @@ pub fn sys_pwritev2(
     fd: c_int,
     iov: *const IoVec,
     iovcnt: usize,
-    offset: __kernel_off_t,
+    pos_l: usize,
+    pos_h: usize,
     _flags: u32,
 ) -> AxResult<isize> {
+    let offset = pos_from_hilo(pos_h, pos_l);
     debug!("sys_pwritev2 <= fd: {fd}, iovcnt: {iovcnt}, offset: {offset}, flags: {_flags}");
     let f = File::from_fd(fd)?;
     f.inner()
-        .read_at(IoVectorBuf::new(iov, iovcnt)?.into_io(), offset as _)
+        .write_at(IoVectorBuf::new(iov, iovcnt)?.into_io(), offset as _)
         .map(|n| n as _)
 }
 
