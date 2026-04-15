@@ -220,6 +220,19 @@ pub fn close_file_like(fd: c_int) -> AxResult {
     Ok(())
 }
 
+/// Close all open file descriptors for the current process.
+///
+/// This must be called when a process exits, so that pipe write ends and other
+/// resources are properly released. Without this, parent processes blocking on
+/// pipe reads will never receive EOF.
+pub fn close_all_fds() {
+    let mut table = FD_TABLE.write();
+    let ids: alloc::vec::Vec<usize> = table.ids().collect();
+    for id in ids {
+        drop(table.remove(id));
+    }
+}
+
 pub fn add_stdio(fd_table: &mut FlattenObjects<FileDescriptor, AX_FILE_LIMIT>) -> AxResult<()> {
     assert_eq!(fd_table.count(), 0);
     let cx = FS_CONTEXT.lock();

@@ -4,7 +4,7 @@ use core::{
     task::Context,
 };
 
-use ax_errno::{AxError, AxResult};
+use ax_errno::{AxError, AxResult, LinuxError};
 use ax_fs::{FS_CONTEXT, FileFlags, OpenOptions};
 use ax_io::{Seek, SeekFrom};
 use ax_task::current;
@@ -80,7 +80,15 @@ pub fn sys_lseek(fd: c_int, offset: __kernel_off_t, whence: c_int) -> AxResult<i
         2 => SeekFrom::End(offset as _),
         _ => return Err(AxError::InvalidInput),
     };
-    let off = File::from_fd(fd)?.inner().seek(pos)?;
+    let f = File::from_fd(fd).map_err(|e| {
+        // lseek on non-file (pipe, device) should return ESPIPE, not EPIPE
+        if e == AxError::BrokenPipe {
+            AxError::from(LinuxError::ESPIPE)
+        } else {
+            e
+        }
+    })?;
+    let off = f.inner().seek(pos)?;
     Ok(off as _)
 }
 
@@ -124,15 +132,19 @@ pub fn sys_fallocate(
 
 pub fn sys_fsync(fd: c_int) -> AxResult<isize> {
     debug!("sys_fsync <= {fd}");
-    let f = File::from_fd(fd)?;
-    f.inner().sync(false)?;
+    if let Ok(f) = File::from_fd(fd) {
+        f.inner().sync(false)?;
+    }
+    // For non-file fds (directories, etc.), fsync is a no-op
     Ok(0)
 }
 
 pub fn sys_fdatasync(fd: c_int) -> AxResult<isize> {
     debug!("sys_fdatasync <= {fd}");
-    let f = File::from_fd(fd)?;
-    f.inner().sync(true)?;
+    if let Ok(f) = File::from_fd(fd) {
+        f.inner().sync(true)?;
+    }
+    // For non-file fds (directories, etc.), fdatasync is a no-op
     Ok(0)
 }
 

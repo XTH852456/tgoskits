@@ -5,7 +5,7 @@ use ax_errno::{AxError, AxResult};
 use ax_io::prelude::*;
 use axnet::{CMsgData, RecvFlags, RecvOptions, SendFlags, SendOptions, SocketAddrEx, SocketOps};
 use linux_raw_sys::net::{
-    MSG_PEEK, MSG_TRUNC, SCM_RIGHTS, SOL_SOCKET, cmsghdr, msghdr, sockaddr, socklen_t,
+    MSG_PEEK, MSG_TRUNC, SCM_RIGHTS, SOL_SOCKET, cmsghdr, mmsghdr, msghdr, sockaddr, socklen_t,
 };
 
 use super::addr::SocketAddrExt;
@@ -29,8 +29,6 @@ fn send_impl(
         Some(SocketAddrEx::read_from_user(addr, addrlen)?)
     };
 
-    debug!("sys_send <= fd: {fd}, flags: {flags}, addr: {addr:?}");
-
     let socket = Socket::from_fd(fd)?;
     let sent = socket.send(
         &mut src,
@@ -40,7 +38,6 @@ fn send_impl(
             cmsg,
         },
     )?;
-
     Ok(sent as isize)
 }
 
@@ -88,8 +85,6 @@ fn recv_impl(
     addrlen: UserPtr<socklen_t>,
     cmsg_builder: Option<CMsgBuilder>,
 ) -> AxResult<isize> {
-    debug!("sys_recv <= fd: {fd}, flags: {flags}");
-
     let socket = Socket::from_fd(fd)?;
     let mut recv_flags = RecvFlags::empty();
     if flags & MSG_PEEK != 0 {
@@ -170,4 +165,83 @@ pub fn sys_recvmsg(fd: i32, msg: UserPtr<msghdr>, flags: u32) -> AxResult<isize>
             )
         }),
     )
+}
+
+pub fn sys_sendmmsg(fd: i32, msgvec: UserPtr<mmsghdr>, vlen: u32, flags: u32) -> AxResult<isize> {
+    let msgvec = msgvec.get_as_mut_slice(vlen as usize)?;
+    let mut sent = 0;
+    for msg in msgvec.iter_mut() {
+        let mut cmsg = Vec::new();
+        if !msg.msg_hdr.msg_control.is_null() {
+            let mut ptr = msg.msg_hdr.msg_control as usize;
+            let ptr_end = ptr + msg.msg_hdr.msg_controllen;
+            while ptr + size_of::<cmsghdr>() <= ptr_end {
+                let hdr = UserConstPtr::<cmsghdr>::from(ptr).get_as_ref()?;
+                if ptr_end - ptr < hdr.cmsg_len {
+                    return Err(AxError::InvalidInput);
+                }
+                cmsg.push(Box::new(CMsg::parse(hdr)?) as CMsgData);
+                ptr += hdr.cmsg_len;
+            }
+        }
+        match send_impl(
+            fd,
+            IoVectorBuf::new(msg.msg_hdr.msg_iov as *const IoVec, msg.msg_hdr.msg_iovlen)?
+                .into_io(),
+            flags,
+            UserConstPtr::from(msg.msg_hdr.msg_name as usize),
+            msg.msg_hdr.msg_namelen as socklen_t,
+            cmsg,
+        ) {
+            Ok(n) => {
+                msg.msg_len = n as u32;
+                sent += 1;
+            }
+            Err(e) => {
+                if sent == 0 {
+                    return Err(e);
+                }
+                break;
+            }
+        }
+    }
+    Ok(sent)
+}
+
+pub fn sys_recvmmsg(
+    fd: i32,
+    msgvec: UserPtr<mmsghdr>,
+    vlen: u32,
+    flags: u32,
+    _timeout: UserConstPtr<()>,
+) -> AxResult<isize> {
+    let msgvec = msgvec.get_as_mut_slice(vlen as usize)?;
+    let mut received = 0;
+    for msg in msgvec.iter_mut() {
+        match recv_impl(
+            fd,
+            IoVectorBuf::new(msg.msg_hdr.msg_iov as *mut IoVec, msg.msg_hdr.msg_iovlen)?.into_io(),
+            flags,
+            UserPtr::from(msg.msg_hdr.msg_name as usize),
+            UserPtr::from(&mut msg.msg_hdr.msg_namelen as *mut _ as *mut socklen_t),
+            (!msg.msg_hdr.msg_control.is_null()).then(|| {
+                CMsgBuilder::new(
+                    UserPtr::from(msg.msg_hdr.msg_control as *mut cmsghdr),
+                    &mut msg.msg_hdr.msg_controllen,
+                )
+            }),
+        ) {
+            Ok(n) => {
+                msg.msg_len = n as u32;
+                received += 1;
+            }
+            Err(e) => {
+                if received == 0 {
+                    return Err(e);
+                }
+                break;
+            }
+        }
+    }
+    Ok(received)
 }

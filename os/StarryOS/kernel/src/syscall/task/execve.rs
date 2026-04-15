@@ -42,7 +42,7 @@ pub fn sys_execve(
             .collect::<Result<Vec<_>, _>>()?
     };
 
-    debug!("sys_execve <= path: {path:?}, args: {args:?}, envs: {envs:?}");
+    debug!("sys_execve <= path: {path:?}, args: {args:?}");
 
     let curr = current();
     let proc_data = &curr.as_thread().proc_data;

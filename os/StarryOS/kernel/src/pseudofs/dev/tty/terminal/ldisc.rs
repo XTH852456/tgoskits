@@ -7,8 +7,8 @@ use core::{
 };
 
 use ax_errno::{AxError, AxResult};
-use ax_task::future::{block_on, poll_io};
-use axpoll::{IoEvents, PollSet, Pollable};
+use ax_task::future::block_on;
+use axpoll::PollSet;
 use linux_raw_sys::general::{
     ECHOCTL, ECHOK, ICRNL, IGNCR, ISIG, VEOF, VERASE, VKILL, VMIN, VTIME,
 };
@@ -215,21 +215,6 @@ pub struct LineDiscipline<R, W> {
     processor: Processor<R, W>,
 }
 
-struct WaitPollable<'a>(Option<&'a Arc<PollSet>>);
-impl Pollable for WaitPollable<'_> {
-    fn poll(&self) -> IoEvents {
-        unreachable!()
-    }
-
-    fn register(&self, context: &mut Context<'_>, _events: IoEvents) {
-        if let Some(set) = self.0 {
-            set.register(context.waker());
-        } else {
-            context.waker().wake_by_ref();
-        }
-    }
-}
-
 impl<R: TtyRead, W: TtyWrite> LineDiscipline<R, W> {
     pub fn new(terminal: Arc<Terminal>, config: TtyConfig<R, W>) -> Self {
         let (buf_tx, buf_rx) = ReadBuf::default().split();
@@ -354,18 +339,12 @@ impl<R: TtyRead, W: TtyWrite> LineDiscipline<R, W> {
         }
 
         let mut total_read = 0;
-        let set = match &self.processor {
-            Processor::Manual(_) => None,
-            Processor::External(set) => Some(set),
-            _ => unreachable!(),
-        };
-        let pollable = WaitPollable(set);
-        block_on(poll_io(&pollable, IoEvents::IN, false, || {
-            total_read += self.buf_rx.pop_slice(&mut buf[total_read..]);
-            self.poll_tx.wake();
-            (total_read >= vmin)
-                .then_some(total_read)
-                .ok_or(AxError::WouldBlock)
-        }))
+        total_read += self.buf_rx.pop_slice(buf);
+        self.poll_tx.wake();
+        if total_read >= vmin {
+            Ok(total_read)
+        } else {
+            Err(AxError::WouldBlock)
+        }
     }
 }

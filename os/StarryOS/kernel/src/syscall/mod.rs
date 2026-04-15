@@ -28,6 +28,8 @@ pub fn handle_syscall(uctx: &mut UserContext) {
 
     trace!("Syscall {sysno:?}");
 
+    let syscall_start = ax_hal::time::monotonic_time().as_micros();
+
     let result = match sysno {
         // fs ctl
         Sysno::ioctl => sys_ioctl(uctx.arg0() as _, uctx.arg1() as _, uctx.arg2() as _),
@@ -605,6 +607,19 @@ pub fn handle_syscall(uctx: &mut UserContext) {
             uctx.arg3().into(),
             uctx.arg4() as _,
         ),
+        Sysno::sendmmsg => sys_sendmmsg(
+            uctx.arg0() as _,
+            uctx.arg1().into(),
+            uctx.arg2() as _,
+            uctx.arg3() as _,
+        ),
+        Sysno::recvmmsg => sys_recvmmsg(
+            uctx.arg0() as _,
+            uctx.arg1().into(),
+            uctx.arg2() as _,
+            uctx.arg3() as _,
+            uctx.arg4().into(),
+        ),
 
         // signal file descriptors
         Sysno::signalfd4 => sys_signalfd4(
@@ -629,8 +644,18 @@ pub fn handle_syscall(uctx: &mut UserContext) {
 
         Sysno::timer_create | Sysno::timer_gettime | Sysno::timer_settime => Ok(0),
 
+        // sync_file_range: return success (no-op, same as fsync for directories)
+        Sysno::sync_file_range => Ok(0),
+
+        // Known benign unimplemented syscalls (glibc handles ENOSYS gracefully)
+        Sysno::rseq => {
+            debug!("sys_rseq: not implemented, returning ENOSYS");
+            Err(AxError::Unsupported)
+        }
+
         _ => {
-            warn!("Unimplemented syscall: {sysno}");
+            let tid = ax_task::current().id().as_u64() as u32;
+            warn!("Unimplemented syscall: {sysno} (tid={tid})");
             Err(AxError::Unsupported)
         }
     };

@@ -166,6 +166,8 @@ pub(crate) async fn prepare_test_qemu_config(
 
 fn qemu_args_for_disk_image(disk_img: PathBuf) -> anyhow::Result<Vec<String>> {
     Ok(vec![
+        "-m".to_string(),
+        "1G".to_string(),
         "-device".to_string(),
         "virtio-blk-pci,drive=disk0".to_string(),
         "-drive".to_string(),

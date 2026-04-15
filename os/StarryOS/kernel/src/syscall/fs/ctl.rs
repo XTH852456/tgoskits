@@ -45,7 +45,7 @@ pub fn sys_ioctl(fd: i32, cmd: u32, arg: usize) -> AxResult<isize> {
                 if cmd == TIOCGWINSZ {
                     return;
                 }
-                warn!("Unsupported ioctl command: {cmd} for fd: {fd}");
+                debug!("Unsupported ioctl command: {cmd} for fd: {fd}");
             }
         })
 }
@@ -94,6 +94,14 @@ pub fn sys_mkdirat(dirfd: i32, path: *const c_char, mode: u32) -> AxResult<isize
     let mode = NodePermission::from_bits_truncate(mode as u16);
 
     with_fs(dirfd, |fs| {
+        // If the path already exists as a directory, succeed (like Linux does for mkdir("."))
+        if let Ok(entry) = fs.resolve(&path) {
+            if entry.node_type() == NodeType::Directory {
+                return Ok(0);
+            } else {
+                return Err(AxError::AlreadyExists);
+            }
+        }
         fs.create_dir(path, mode)?;
         Ok(0)
     })

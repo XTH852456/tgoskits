@@ -159,7 +159,8 @@ impl FileNodeOps for Inode {
     }
 
     fn set_len(&self, len: u64) -> VfsResult<()> {
-        self.fs.lock().set_len(self.ino, len).map_err(into_vfs_err)
+        let r = self.fs.lock().set_len(self.ino, len).map_err(into_vfs_err);
+        r
     }
 
     fn set_symlink(&self, target: &str) -> VfsResult<()> {

@@ -222,6 +222,13 @@ pub fn do_exit(exit_code: i32, group_exit: bool) {
 
     let process = &thr.proc_data.proc;
     if process.exit_thread(curr.id().as_u64() as Pid, exit_code) {
+        // Close all file descriptors before marking the process as exited.
+        // This is critical: if we don't close FDs here, pipe write ends remain
+        // open and parent processes will hang forever reading from the pipe.
+        // FD cleanup cannot rely on Scope Drop because the task may remain as
+        // a zombie until the parent calls wait4().
+        crate::file::close_all_fds();
+
         process.exit();
         if let Some(parent) = process.parent() {
             if let Some(signo) = thr.proc_data.exit_signal {

@@ -66,6 +66,7 @@ fn patch_starry_cargo_config(
     cargo.package = request.package.clone();
     cargo.target = request.target.clone();
     ensure_starry_bin_arg(&mut cargo.args, &request.package)?;
+    ensure_build_std_args(&mut cargo.args, &request.target);
     cargo.features.push("qemu".to_string());
     cargo.features.sort();
     cargo.features.dedup();
@@ -82,6 +83,23 @@ fn patch_starry_cargo_config(
         .or_insert_with(|| platform.to_string());
 
     Ok(())
+}
+
+fn ensure_build_std_args(args: &mut Vec<String>, target: &str) {
+    if !target.contains("-unknown-none") || has_build_std_arg(args) {
+        return;
+    }
+
+    args.push("-Z".to_string());
+    args.push("build-std=core,alloc".to_string());
+}
+
+fn has_build_std_arg(args: &[String]) -> bool {
+    args.iter().any(|arg| {
+        arg.starts_with("-Zbuild-std") || arg == "build-std" || arg.starts_with("build-std=")
+    }) || args.windows(2).any(|window| {
+        window[0] == "-Z" && (window[1] == "build-std" || window[1].starts_with("build-std="))
+    })
 }
 
 fn ensure_starry_bin_arg(args: &mut Vec<String>, package: &str) -> anyhow::Result<()> {
@@ -308,6 +326,36 @@ HELLO = "world"
         assert_eq!(cargo.env.get("AX_LOG").map(String::as_str), Some("info"));
         assert_eq!(cargo.env.get("CUSTOM").map(String::as_str), Some("1"));
         assert!(cargo.to_bin);
+        assert!(
+            cargo
+                .args
+                .windows(2)
+                .any(|window| window[0] == "-Z" && window[1] == "build-std=core,alloc")
+        );
+    }
+
+    #[test]
+    fn patch_starry_cargo_config_does_not_duplicate_build_std_args() {
+        let request = request(
+            PathBuf::from("/tmp/.build.toml"),
+            "aarch64",
+            "aarch64-unknown-none-softfloat",
+        );
+        let build_info = StarryBuildInfo::default_starry_for_target(&request.target);
+        let mut cargo = build_info.into_base_cargo_config_with_log(
+            STARRY_PACKAGE.to_string(),
+            request.target.clone(),
+            vec!["-Z".to_string(), "build-std=core,alloc".to_string()],
+        );
+
+        patch_starry_cargo_config(&mut cargo, &request).unwrap();
+
+        let build_std_pair_count = cargo
+            .args
+            .windows(2)
+            .filter(|window| window[0] == "-Z" && window[1] == "build-std=core,alloc")
+            .count();
+        assert_eq!(build_std_pair_count, 1);
     }
 
     #[test]

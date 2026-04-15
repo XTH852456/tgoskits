@@ -378,7 +378,7 @@ struct CachedFileShared {
 impl CachedFileShared {
     pub fn new() -> Self {
         Self {
-            page_cache: Mutex::new(LruCache::new(NonZeroUsize::new(64).unwrap())),
+            page_cache: Mutex::new(LruCache::unbounded()),
             evict_listeners: Mutex::new(LinkedList::default()),
         }
     }
@@ -520,7 +520,7 @@ impl CachedFile {
             return Ok((cache.get_mut(&pn).unwrap(), None));
         }
         let mut evicted = None;
-        if cache.len() == cache.cap().get() {
+        if cache.len() >= cache.cap().get() {
             // Cache is full, remove the least recently used page
             if let Some((pn, mut page)) = cache.pop_lru() {
                 self.evict_cache(file, pn, &mut page)?;

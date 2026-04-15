@@ -112,6 +112,46 @@ macro_rules! call_dispatch {
     }
 }
 
+/// Like call_dispatch but returns Option<AxResult<()>> instead of early-returning on unknown options.
+macro_rules! call_dispatch_or_none {
+    ($dispatch:ident, $pat:expr) => {{
+        use conv::*;
+        use linux_raw_sys::net::*;
+
+        call_dispatch_or_none! {
+            $dispatch, $pat,
+            (SOL_SOCKET, SO_REUSEADDR) => ReuseAddress as IntBool,
+            (SOL_SOCKET, SO_ERROR) => Error,
+            (SOL_SOCKET, SO_DONTROUTE) => DontRoute as IntBool,
+            (SOL_SOCKET, SO_SNDBUF) => SendBuffer as Int<usize>,
+            (SOL_SOCKET, SO_RCVBUF) => ReceiveBuffer as Int<usize>,
+            (SOL_SOCKET, SO_KEEPALIVE) => KeepAlive as IntBool,
+            (SOL_SOCKET, SO_RCVTIMEO) => ReceiveTimeout as Duration,
+            (SOL_SOCKET, SO_SNDTIMEO) => SendTimeout as Duration,
+            (SOL_SOCKET, SO_PASSCRED) => PassCredentials as IntBool,
+            (SOL_SOCKET, SO_PEERCRED) => PeerCredentials as Ucred,
+
+            (PROTO_TCP, TCP_NODELAY) => NoDelay as IntBool,
+            (PROTO_TCP, TCP_MAXSEG) => MaxSegment as Int<usize>,
+            (PROTO_TCP, TCP_INFO) => TcpInfo,
+
+            (PROTO_IP, IP_TTL) => Ttl as Int<u8>,
+        }
+    }};
+    ($dispatch:ident, $in:expr, $($pat:pat => $which:ident $(as $conv:ty)?),* $(,)?) => {{
+        let mut _result: Option<AxResult<()>> = None;
+        match $in {
+            $(
+                $pat => {
+                    _result = Some((|| { dispatch!($which $(as $conv)?); Ok(()) })());
+                }
+            )*
+            _ => {}
+        }
+        _result
+    }}
+}
+
 pub fn sys_getsockopt(
     fd: i32,
     level: u32,
@@ -186,7 +226,19 @@ pub fn sys_setsockopt(
             socket.set_option(SetSocketOption::$which(&mut val))?;
         };
     }
-    call_dispatch!(dispatch, (level, optname));
+
+    let result: Option<AxResult<()>> = call_dispatch_or_none!(dispatch, (level, optname));
+    match result {
+        Some(Ok(())) => {}
+        Some(Err(e)) => return Err(e),
+        None => {
+            // Silently ignore unknown setsockopt options.
+            // Many programs (including glibc's DNS resolver) set options like
+            // IP_RECVERR that are optional. Returning ENOPROTOOPT here causes
+            // glibc's resolver to fail DNS resolution entirely.
+            warn!("setsockopt: ignoring unknown option level:{level} optname:{optname}");
+        }
+    }
 
     Ok(0)
 }

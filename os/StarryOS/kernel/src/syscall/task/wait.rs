@@ -105,7 +105,7 @@ pub fn sys_waitpid(pid: i32, exit_code: *mut i32, options: u32) -> AxResult<isiz
         }
     };
 
-    block_on(interruptible(poll_fn(|cx| {
+    let result = block_on(interruptible(poll_fn(|cx| {
         match check_children().transpose() {
             Some(res) => Poll::Ready(res),
             None => {
@@ -113,5 +113,6 @@ pub fn sys_waitpid(pid: i32, exit_code: *mut i32, options: u32) -> AxResult<isiz
                 Poll::Pending
             }
         }
-    })))?
+    })))?;
+    result
 }
