@@ -27,10 +27,12 @@ import json
 import math
 import os
 import re
+import shutil
 import ssl
 import subprocess
 import sys
 import tarfile
+import tempfile
 import time
 import tomllib
 from datetime import datetime, timezone
@@ -167,6 +169,92 @@ def package_publish_target(pkg: Package) -> str | None:
     return None
 
 
+def bare_toml_key(key: str) -> bool:
+    return bool(re.fullmatch(r"[A-Za-z0-9_-]+", key))
+
+
+def toml_key(key: str) -> str:
+    if bare_toml_key(key):
+        return key
+    escaped = key.replace("\\", "\\\\").replace('"', '\\"')
+    return f'"{escaped}"'
+
+
+def toml_value(value: Any) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, int):
+        return str(value)
+    if isinstance(value, float):
+        if math.isfinite(value):
+            return repr(value)
+        raise SystemExit(f"unsupported non-finite float in TOML output: {value!r}")
+    if isinstance(value, str):
+        escaped = (
+            value.replace("\\", "\\\\")
+            .replace('"', '\\"')
+            .replace("\b", "\\b")
+            .replace("\t", "\\t")
+            .replace("\n", "\\n")
+            .replace("\f", "\\f")
+            .replace("\r", "\\r")
+        )
+        return f'"{escaped}"'
+    if isinstance(value, list):
+        if any(isinstance(item, dict) for item in value):
+            raise SystemExit("inline TOML arrays of tables are not supported")
+        return "[" + ", ".join(toml_value(item) for item in value) + "]"
+    raise SystemExit(f"unsupported TOML value type: {type(value).__name__}")
+
+
+def write_toml_table(lines: list[str], table: dict[str, Any], prefix: tuple[str, ...] = ()) -> None:
+    scalar_items: list[tuple[str, Any]] = []
+    dict_items: list[tuple[str, dict[str, Any]]] = []
+    array_table_items: list[tuple[str, list[dict[str, Any]]]] = []
+
+    for key, value in table.items():
+        if isinstance(value, dict):
+            dict_items.append((key, value))
+        elif isinstance(value, list) and value and all(isinstance(item, dict) for item in value):
+            array_table_items.append((key, value))
+        else:
+            scalar_items.append((key, value))
+
+    if prefix:
+        lines.append("[" + ".".join(toml_key(part) for part in prefix) + "]")
+
+    for key, value in scalar_items:
+        lines.append(f"{toml_key(key)} = {toml_value(value)}")
+
+    if prefix and (dict_items or array_table_items):
+        lines.append("")
+
+    first_nested = True
+    for key, value in dict_items:
+        if not first_nested:
+            lines.append("")
+        write_toml_table(lines, value, prefix + (key,))
+        first_nested = False
+
+    for key, values in array_table_items:
+        if not first_nested:
+            lines.append("")
+        for index, item in enumerate(values):
+            if index > 0:
+                lines.append("")
+            lines.append("[[" + ".".join(toml_key(part) for part in prefix + (key,)) + "]]")
+            nested_lines: list[str] = []
+            write_toml_table(nested_lines, item)
+            lines.extend(nested_lines)
+        first_nested = False
+
+
+def dump_toml_document(data: dict[str, Any]) -> str:
+    lines: list[str] = []
+    write_toml_table(lines, data)
+    return "\n".join(lines).rstrip() + "\n"
+
+
 def discover_cargo_manifests(search_root: Path) -> list[Path]:
     repo_root = Path.cwd().resolve()
     manifests: list[Path] = []
@@ -280,6 +368,44 @@ def resolve_workspace_value(
     return value
 
 
+def merge_workspace_dependency(
+    value: Any,
+    *,
+    workspace_data: dict[str, Any],
+    name: str,
+) -> Any:
+    if not (isinstance(value, dict) and value.get("workspace") is True):
+        return value
+
+    inherited = workspace_table(workspace_data, "dependencies", name)
+    if inherited is None:
+        raise SystemExit(
+            f"unable to resolve workspace dependency entry {name!r} from enclosing workspace"
+        )
+
+    if isinstance(inherited, str):
+        merged: dict[str, Any] = {"version": inherited}
+    elif isinstance(inherited, dict):
+        merged = dict(inherited)
+    else:
+        raise SystemExit(
+            f"unsupported workspace dependency specification for {name!r}: {inherited!r}"
+        )
+
+    local = {key: dep_value for key, dep_value in value.items() if key != "workspace"}
+    if "features" in merged and "features" in local:
+        base_features = merged.get("features")
+        local_features = local.get("features")
+        if isinstance(base_features, list) and isinstance(local_features, list):
+            merged["features"] = base_features + [
+                feature for feature in local_features if feature not in base_features
+            ]
+            local.pop("features")
+
+    merged.update(local)
+    return merged
+
+
 def dependency_kind(table_name: str) -> str | None:
     if table_name == "build-dependencies":
         return "build"
@@ -322,6 +448,132 @@ def normalize_dependency_spec(name: str, spec: Any, kind: str | None) -> dict[st
         "registry": spec.get("registry"),
         **({"path": path} if path else {}),
     }
+
+
+def infer_path_dependency_version(
+    manifest_path: Path,
+    dep_name: str,
+    spec: dict[str, Any],
+) -> str:
+    path_value = spec.get("path")
+    if not isinstance(path_value, str) or not path_value:
+        raise SystemExit(
+            f"missing dependency path while inferring version for {dep_name!r} in {manifest_path}"
+        )
+
+    dep_dir = (manifest_path.parent / path_value).resolve()
+    dep_manifest = dep_dir / "Cargo.toml"
+    if not dep_manifest.exists():
+        raise SystemExit(
+            f"unable to locate dependency manifest for {dep_name!r}: {dep_manifest}"
+        )
+
+    dep_pkg = package_from_manifest(
+        dep_manifest,
+        workspace_manifest=find_enclosing_workspace_manifest(dep_manifest),
+    )
+    if dep_pkg is None:
+        raise SystemExit(
+            f"unable to infer dependency version for non-package path {dep_name!r}: {dep_manifest}"
+        )
+    return dep_pkg.version
+
+
+def normalize_dependency_for_publish(
+    manifest_path: Path,
+    dep_name: str,
+    raw_spec: Any,
+    *,
+    workspace_data: dict[str, Any],
+) -> Any:
+    spec = merge_workspace_dependency(raw_spec, workspace_data=workspace_data, name=dep_name)
+
+    if isinstance(spec, str):
+        return spec
+    if not isinstance(spec, dict):
+        raise SystemExit(f"unsupported dependency specification for {dep_name!r}: {spec!r}")
+
+    normalized = dict(spec)
+    normalized.pop("workspace", None)
+    normalized.pop("path", None)
+    if "version" not in normalized and isinstance(spec.get("path"), str):
+        normalized["version"] = infer_path_dependency_version(manifest_path, dep_name, spec)
+
+    return normalized
+
+
+def normalize_manifest_for_publish(pkg: Package) -> dict[str, Any]:
+    manifest_data = cargo_toml_data(pkg.manifest_path)
+    workspace_manifest = find_enclosing_workspace_manifest(pkg.manifest_path)
+    workspace_data = cargo_toml_data(workspace_manifest) if workspace_manifest else {}
+
+    normalized = dict(manifest_data)
+    normalized.pop("workspace", None)
+    normalized.pop("patch", None)
+    normalized.pop("replace", None)
+
+    package_data = dict(normalized.get("package", {}))
+    for key, value in list(package_data.items()):
+        package_data[key] = resolve_workspace_value(
+            value,
+            workspace_data=workspace_data,
+            section="package",
+            name=key,
+        )
+    normalized["package"] = package_data
+
+    for table_name, table in list(normalized.items()):
+        if table_name in ("dependencies", "build-dependencies", "dev-dependencies"):
+            if isinstance(table, dict):
+                normalized[table_name] = {
+                    dep_name: normalize_dependency_for_publish(
+                        pkg.manifest_path,
+                        dep_name,
+                        dep_spec,
+                        workspace_data=workspace_data,
+                    )
+                    for dep_name, dep_spec in table.items()
+                }
+            continue
+
+        if table_name != "target" or not isinstance(table, dict):
+            continue
+
+        new_target: dict[str, Any] = {}
+        for target_name, target_table in table.items():
+            if not isinstance(target_table, dict):
+                new_target[target_name] = target_table
+                continue
+            new_target_table = dict(target_table)
+            for dep_table_name in ("dependencies", "build-dependencies", "dev-dependencies"):
+                dep_table = target_table.get(dep_table_name)
+                if not isinstance(dep_table, dict):
+                    continue
+                new_target_table[dep_table_name] = {
+                    dep_name: normalize_dependency_for_publish(
+                        pkg.manifest_path,
+                        dep_name,
+                        dep_spec,
+                        workspace_data=workspace_data,
+                    )
+                    for dep_name, dep_spec in dep_table.items()
+                }
+            new_target[target_name] = new_target_table
+        normalized["target"] = new_target
+
+    return normalized
+
+
+def stage_publish_manifest(pkg: Package) -> tuple[tempfile.TemporaryDirectory[str], Path]:
+    tempdir = tempfile.TemporaryDirectory(prefix="publish-stage-")
+    stage_root = Path(tempdir.name)
+    rel_manifest = pkg.manifest_path.relative_to(Path.cwd())
+    stage_manifest = stage_root / rel_manifest
+    shutil.copytree(pkg.crate_dir, stage_manifest.parent, dirs_exist_ok=True)
+
+    normalized_manifest = normalize_manifest_for_publish(pkg)
+    stage_manifest.write_text(dump_toml_document(normalized_manifest))
+    return tempdir, stage_manifest
 
 
 def package_from_manifest(
@@ -981,11 +1233,12 @@ def check_owners(crate: str, expected_owners: list[str]) -> tuple[str, str]:
 def run_publish_command(
     pkg: Package, *, locked: bool, allow_dirty: bool
 ) -> subprocess.CompletedProcess[str]:
+    staged_tempdir, staged_manifest = stage_publish_manifest(pkg)
     cmd = [
         "cargo",
         "publish",
         "--manifest-path",
-        str(pkg.manifest_path),
+        str(staged_manifest),
     ]
     publish_target = package_publish_target(pkg)
     if publish_target is not None:
@@ -994,7 +1247,10 @@ def run_publish_command(
         cmd.append("--locked")
     if allow_dirty:
         cmd.append("--allow-dirty")
-    return run(cmd, check=False)
+    try:
+        return run(cmd, check=False, cwd=Path(staged_tempdir.name))
+    finally:
+        staged_tempdir.cleanup()
 
 
 def publish_package(pkg: Package, dry_run: bool, *, allow_dirty: bool) -> tuple[str, str]:
