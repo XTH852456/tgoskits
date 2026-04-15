@@ -7,12 +7,12 @@ authors = [
   "Mivik <mivikq@gmail.com>",
 ]
 description = "A Linux-compatible OS kernel built on ArceOS unikernel"
-edition.workspace = true
-license.workspace = true
+edition = "2024"
+license = "Apache-2.0"
 name = "starryos"
 readme = "README.md"
-repository.workspace = true
-version.workspace = true
+repository = "https://github.com/rcore-os/tgoskits"
+version = "0.5.3"
 
 [features]
 default = []

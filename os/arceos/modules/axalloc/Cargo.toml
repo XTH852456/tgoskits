@@ -2,10 +2,10 @@
 name = "ax-alloc"
 version = "0.5.3"
 repository = "https://github.com/rcore-os/tgoskits"
-edition.workspace = true
+edition = "2024"
 authors = ["Yuekai Jia <equation618@gmail.com>"]
 description = "ArceOS global memory allocator"
-license.workspace = true
+license = "Apache-2.0"
 
 [features]
 default = ["tlsf", "ax-allocator/page-alloc-256m"]

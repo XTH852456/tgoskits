@@ -8,7 +8,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.1.2"
+version = "0.1.3"
 edition = "2021"
 authors = ["Yuekai Jia <equation618@gmail.com>"]
 repository = "https://github.com/rcore-os/tgoskits"
@@ -16,4 +16,4 @@ categories = ["os", "no-std", "filesystem"]
 license = "Apache-2.0"
 
 [workspace.dependencies]
-ax-fs-vfs = { path = "axfs_vfs", version = "0.3.3" }
+ax-fs-vfs = { path = "axfs_vfs", version = "0.3.4" }

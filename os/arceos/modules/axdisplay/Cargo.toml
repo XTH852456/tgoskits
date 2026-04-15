@@ -1,11 +1,11 @@
 [package]
 name = "ax-display"
-version.workspace = true
+version = "0.5.3"
 repository = "https://github.com/rcore-os/tgoskits"
-edition.workspace = true
+edition = "2024"
 authors = ["Shiping Yuan <robert_yuan@pku.edu.com>"]
 description = "ArceOS graphics module"
-license.workspace = true
+license = "Apache-2.0"
 
 [dependencies]
 ax-driver = { workspace = true, features = ["display"] }

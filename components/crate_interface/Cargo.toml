@@ -7,7 +7,7 @@ exclude = ["test_crates"]
 license = "Apache-2.0"
 [package]
 name = "ax-crate-interface"
-version = "0.5.0"
+version = "0.5.1"
 repository = "https://github.com/rcore-os/tgoskits"
 edition = "2021"
 authors = ["Yuekai Jia <equation618@gmail.com>", "Su Mingxian <aarkegz@gmail.com>"]
@@ -15,7 +15,7 @@ description = "Provides a way to define an interface (trait) in a crate, but can
 keywords = ["arceos", "api", "macro"]
 categories = ["development-tools::procedural-macro-helpers", "no-std"]
 rust-version = "1.68"
-license.workspace = true
+license = "Apache-2.0"
 
 [dependencies]
 proc-macro2 = "1.0"

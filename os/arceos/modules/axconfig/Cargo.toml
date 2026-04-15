@@ -1,12 +1,12 @@
 [package]
 name = "ax-config"
-version.workspace = true
+version = "0.5.3"
 repository = "https://github.com/rcore-os/tgoskits"
-edition.workspace = true
+edition = "2024"
 authors = ["Yuekai Jia <equation618@gmail.com>"]
 description = "Platform-specific constants and parameters for ArceOS"
 include = ["src/**/*", "build.rs", "dummy.toml", "Cargo.toml", "README.md"]
-license.workspace = true
+license = "Apache-2.0"
 
 [dependencies]
 ax-config-macros = "0.4.1"

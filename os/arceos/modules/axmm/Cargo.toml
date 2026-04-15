@@ -1,11 +1,11 @@
 [package]
 name = "ax-mm"
-version.workspace = true
+version = "0.5.3"
 repository = "https://github.com/rcore-os/tgoskits"
-edition.workspace = true
+edition = "2024"
 authors = ["Yuekai Jia <equation618@gmail.com>"]
 description = "ArceOS virtual memory management module"
-license.workspace = true
+license = "Apache-2.0"
 
 [features]
 copy = ["ax-page-table-multiarch/copy-from"]

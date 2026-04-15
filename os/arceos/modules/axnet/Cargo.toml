@@ -1,14 +1,14 @@
 [package]
 name = "ax-net"
-version.workspace = true
+version = "0.5.3"
 repository = "https://github.com/rcore-os/tgoskits"
-edition.workspace = true
+edition = "2024"
 authors = [
   "Yuekai Jia <equation618@gmail.com>",
   "ChengXiang Qi <kuangjux@outlook.com>",
 ]
 description = "ArceOS network module"
-license.workspace = true
+license = "Apache-2.0"
 
 [features]
 smoltcp = ["dep:smoltcp"]

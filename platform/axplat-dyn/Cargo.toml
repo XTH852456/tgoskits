@@ -1,13 +1,13 @@
 [package]
 name = "axplat-dyn"
-version.workspace = true
+version = "0.5.3"
 authors = ["周睿 <zrufo747@outlook.com>"]
-categories.workspace = true
+categories = ["os", "no-std"]
 description = "A dynamic platform module for ArceOS, providing runtime platform detection and configuration"
-edition.workspace = true
-keywords.workspace = true
-license.workspace = true
-repository.workspace = true
+edition = "2024"
+keywords = ["arceos", "kernel"]
+license = "Apache-2.0"
+repository = "https://github.com/rcore-os/tgoskits"
 
 [features]
 default = ["smp", "irq" ]
@@ -29,7 +29,7 @@ virtio-net-pci = ["net"]
 [dependencies]
 anyhow = { version = "1", default-features = false }
 ax-alloc = { version = "0.5.2", path = "../../os/arceos/modules/axalloc", default-features = false, features = ["buddy-slab"] }
-ax-config-macros = "0.4.1"
+ax-config-macros = "0.4.2"
 ax-cpu.workspace = true
 ax-driver-base.workspace = true
 ax-driver-block.workspace = true

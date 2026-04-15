@@ -1,13 +1,13 @@
 [package]
 name = "ax-dma"
-edition.workspace = true
-version.workspace = true
+edition = "2024"
+version = "0.5.3"
 repository = "https://github.com/rcore-os/tgoskits"
 authors = ["Zhour Rui <zrufo747@outlook.com>"]
 description = "ArceOS global DMA allocator"
 keywords.workspace = true
 categories.workspace = true
-license.workspace = true
+license = "Apache-2.0"
 
 [features]
 default = []

@@ -3,9 +3,9 @@ name = "ax-helloworld-myplat"
 version = "0.3.0"
 publish = false
 repository = "https://github.com/rcore-os/tgoskits"
-edition.workspace = true
+edition = "2024"
 authors = ["Yuekai Jia <equation618@gmail.com>"]
-license.workspace = true
+license = "Apache-2.0"
 
 [features]
 x86-pc = ["dep:ax-plat-x86-pc"]

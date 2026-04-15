@@ -1,6 +1,6 @@
 [package]
 name = "ax-crate-interface-lite"
-version = "0.3.0"
+version = "0.3.1"
 repository = "https://github.com/rcore-os/tgoskits"
 edition = "2021"
 authors = ["Yuekai Jia <equation618@gmail.com>", "Loi Chyan <loichyan@outlook.com>"]
@@ -8,4 +8,4 @@ description = "Provides a way to define an interface (trait) in a crate, but can
 keywords = ["arceos", "api", "macro"]
 categories = ["development-tools::procedural-macro-helpers", "no-std"]
 rust-version = "1.68"
-license.workspace = true
+license = "Apache-2.0"

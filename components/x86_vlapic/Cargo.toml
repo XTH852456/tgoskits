@@ -1,6 +1,6 @@
 [package]
 name = "x86_vlapic"
-version = "0.4.3"
+version = "0.4.4"
 edition = "2024"
 description = "x86 Virtual Local APIC"
 authors = ["Keyang Hu <keyang.hu@qq.com>", "Mingxian Su <aarkegz@gmail.com>"]
@@ -18,9 +18,9 @@ paste = "1.0.15"
 tock-registers = "0.10.0"
 bit = "0.1.1"
 
-ax-memory-addr = "0.6.1"
-ax-errno = "0.4.2"
+ax-memory-addr = "0.6.2"
+ax-errno = "0.4.3"
 
-axaddrspace = "0.5.1"
-axdevice_base = "0.4.3"
-axvisor_api = "0.5.1"
+axaddrspace = "0.5.2"
+axdevice_base = "0.4.4"
+axvisor_api = "0.5.2"
