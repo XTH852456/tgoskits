@@ -95,10 +95,6 @@ impl Service {
         self.next_deadline
     }
 
-    pub fn device_cpu(&self, index: usize) -> usize {
-        index % ax_hal::cpu_num()
-    }
-
     pub fn router_device_count(&self) -> usize {
         self.router.devices.len()
     }

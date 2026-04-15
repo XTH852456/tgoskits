@@ -30,6 +30,12 @@ impl ax_plat::time::TimeIf for GenericTimer {
     /// Return epoch offset in nanoseconds (wall time offset to monotonic
     /// clock start).
     fn epochoffset_nanos() -> u64 {
+        #[cfg(all(target_arch = "aarch64", feature = "rtc"))]
+        {
+            return ax_plat_aarch64_peripherals::pl031::epochoffset_nanos();
+        }
+
+        #[allow(unreachable_code)]
         0
     }
     /// Returns the IRQ number for the timer interrupt.

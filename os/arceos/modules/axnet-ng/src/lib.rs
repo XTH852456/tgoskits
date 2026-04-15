@@ -42,7 +42,7 @@ use alloc::{boxed::Box, collections::VecDeque, sync::Arc};
 use core::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 
 use ax_driver::{AxDeviceContainer, prelude::*};
-use ax_sync::Mutex;
+use ax_sync::{Mutex, spin::SpinNoIrq};
 use ax_task::{
     AxCpuMask, WaitQueue, register_timer_callback, set_current_affinity, spawn_with_name,
 };
@@ -78,11 +78,21 @@ static NET_IRQ_DEVICES: [AtomicUsize; NET_IRQ_SLOTS] = [
     AtomicUsize::new(UNBOUND_DEV),
     AtomicUsize::new(UNBOUND_DEV),
 ];
+static NET_IRQ_LINES: [AtomicUsize; NET_IRQ_SLOTS] = [
+    AtomicUsize::new(UNBOUND_DEV),
+    AtomicUsize::new(UNBOUND_DEV),
+    AtomicUsize::new(UNBOUND_DEV),
+    AtomicUsize::new(UNBOUND_DEV),
+    AtomicUsize::new(UNBOUND_DEV),
+    AtomicUsize::new(UNBOUND_DEV),
+    AtomicUsize::new(UNBOUND_DEV),
+    AtomicUsize::new(UNBOUND_DEV),
+];
 
 const NET_POLL_BUDGET: usize = 64;
 
 struct NetCpuState {
-    queue: Mutex<VecDeque<usize>>,
+    queue: SpinNoIrq<VecDeque<usize>>,
     waitq: WaitQueue,
     timer_due: AtomicBool,
     next_deadline_ns: AtomicU64,
@@ -91,7 +101,7 @@ struct NetCpuState {
 impl NetCpuState {
     fn new() -> Self {
         Self {
-            queue: Mutex::new(VecDeque::new()),
+            queue: SpinNoIrq::new(VecDeque::new()),
             waitq: WaitQueue::new(),
             timer_due: AtomicBool::new(false),
             next_deadline_ns: AtomicU64::new(0),
@@ -132,20 +142,21 @@ fn enqueue_softirq(cpu_id: usize, dev_id: usize) {
 }
 
 fn handle_net_irq(dev_id: usize) {
-    let mut service = get_service();
-    let cpu_id = service.device_cpu(dev_id);
-    let events = service.handle_device_irq(dev_id);
-    if events.is_empty() {
-        return;
-    }
-    service.set_device_irq_enabled(dev_id, false);
-    drop(service);
+    let cpu_id = dev_id % ax_hal::cpu_num();
     enqueue_softirq(cpu_id, dev_id);
+}
+
+fn disable_slot_irq(slot: usize) {
+    let irq = NET_IRQ_LINES[slot].load(Ordering::Acquire);
+    if irq != UNBOUND_DEV {
+        ax_hal::irq::set_enable(irq, false);
+    }
 }
 
 fn handle_slot_irq(slot: usize) {
     let dev_id = NET_IRQ_DEVICES[slot].load(Ordering::Acquire);
     if dev_id != UNBOUND_DEV {
+        disable_slot_irq(slot);
         handle_net_irq(dev_id);
     }
 }
@@ -223,11 +234,13 @@ fn run_net_worker(cpu_id: usize) {
         let mut woke_sockets = false;
         while let Some(dev_id) = state.queue.lock().pop_front() {
             let mut service = get_service();
-            let more = service.poll_device(dev_id, NET_POLL_BUDGET, &mut SOCKET_SET.inner.lock());
+            let events = service.handle_device_irq(dev_id);
+            let more = !events.is_empty()
+                && service.poll_device(dev_id, NET_POLL_BUDGET, &mut SOCKET_SET.inner.lock());
             refresh_deadline(cpu_id, service.next_deadline());
             service.set_device_irq_enabled(dev_id, !more);
             drop(service);
-            woke_sockets = true;
+            woke_sockets |= !events.is_empty();
             if more {
                 state.queue.lock().push_back(dev_id);
             }
@@ -337,6 +350,7 @@ pub fn init_network(mut net_devs: AxDeviceContainer<AxNetDevice>) {
     for dev_id in 0..service.router_device_count() {
         if let Some(irq) = service.device_irq_num(dev_id) {
             NET_IRQ_DEVICES[irq_slot].store(dev_id, Ordering::Release);
+            NET_IRQ_LINES[irq_slot].store(irq, Ordering::Release);
             ax_hal::irq::register(irq, irq_handler_for_slot(irq_slot));
             irq_slot += 1;
         }

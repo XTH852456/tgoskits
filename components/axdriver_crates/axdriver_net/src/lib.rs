@@ -18,8 +18,9 @@ pub mod ixgbe;
 pub use ax_driver_base::{BaseDriverOps, DevError, DevResult, DeviceType};
 
 mod net_buf;
-pub use self::net_buf::{NetBuf, NetBufBox, NetBufPool, NetBufPtr};
 use bitflags::bitflags;
+
+pub use self::net_buf::{NetBuf, NetBufBox, NetBufPool, NetBufPtr};
 
 /// The ethernet address of the NIC (MAC address).
 pub struct EthernetAddress(pub [u8; 6]);
