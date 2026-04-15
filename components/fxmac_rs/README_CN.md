@@ -25,7 +25,7 @@
 
 ```toml
 [dependencies]
-fxmac_rs = "0.4.2"
+fxmac_rs = "0.4.3"
 ```
 
 ### 检查与测试

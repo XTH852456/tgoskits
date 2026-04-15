@@ -25,7 +25,7 @@ Add this crate to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-fxmac_rs = "0.4.2"
+fxmac_rs = "0.4.3"
 ```
 
 ### Run Check and Test
