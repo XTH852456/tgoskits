@@ -390,6 +390,7 @@ def collect_packages(metadata_sets: list[dict[str, Any]], root: Path) -> dict[st
     selected: dict[str, Package] = {}
 
     for metadata in metadata_sets:
+        metadata_workspace_root = normalize_path(metadata["workspace_root"])
         workspace_members = set(metadata["workspace_members"])
         for pkg in metadata["packages"]:
             package_id = pkg["id"]
@@ -411,18 +412,25 @@ def collect_packages(metadata_sets: list[dict[str, Any]], root: Path) -> dict[st
                 continue
 
             package_key = str(manifest_path)
-            selected.setdefault(
-                package_key,
-                Package(
-                    name=pkg["name"],
-                    version=pkg["version"],
-                    manifest_path=manifest_path,
-                    package_id=package_key,
-                    workspace_root=package_workspace_root(manifest_path),
-                    publish=publish,
-                    dependencies=pkg.get("dependencies", []),
-                ),
+            candidate = Package(
+                name=pkg["name"],
+                version=pkg["version"],
+                manifest_path=manifest_path,
+                package_id=package_key,
+                workspace_root=metadata_workspace_root,
+                publish=publish,
+                dependencies=pkg.get("dependencies", []),
             )
+            existing = selected.get(package_key)
+            if existing is None:
+                selected[package_key] = candidate
+                continue
+
+            # A crate can appear in multiple metadata snapshots when nested workspaces
+            # overlap. Prefer the package view from the nearest enclosing workspace,
+            # which is the one with the deepest workspace root path.
+            if len(candidate.workspace_root.parts) > len(existing.workspace_root.parts):
+                selected[package_key] = candidate
 
     return selected
 
