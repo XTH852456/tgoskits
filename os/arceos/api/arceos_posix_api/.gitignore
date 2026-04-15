@@ -1,1 +1,2 @@
-ctypes_gen.rs
+# Keep the pre-generated bindings tracked so `cargo publish` can verify the
+# crate without regenerating them from the external axlibc headers.

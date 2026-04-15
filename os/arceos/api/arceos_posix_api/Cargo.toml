@@ -12,7 +12,13 @@ authors = [
     "Shiping Yuan <robert_yuan@pku.edu.com>",
 ]
 description = "POSIX-compatible APIs for ArceOS modules"
-include = ["src/**/*.rs", "Cargo.toml", "build.rs", "ctypes.h"]
+include = [
+    "src/**/*.rs",
+    "src/ctypes_gen.rs",
+    "Cargo.toml",
+    "build.rs",
+    "ctypes.h",
+]
 license.workspace = true
 
 [features]
