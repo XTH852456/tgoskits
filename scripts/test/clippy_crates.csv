@@ -16,9 +16,13 @@ ax-allocator
 ax-arm-pl011
 ax-arm-pl031
 ax-cap-access
+arm_vcpu
+arm_vgic
 ax-config
 ax-cpumask
 ax-display
+axdevice
+axdevice_base
 ax-dma
 ax-errno
 ax-fs-devfs
@@ -47,9 +51,12 @@ axfs-ng-vfs
 axhvc
 axklib
 axpoll
+axvcpu
+axvm
 axvmconfig
 range-alloc-arceos
 riscv-h
+riscv_vplic
 scope-local
 starry-process
 starry-vm

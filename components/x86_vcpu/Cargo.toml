@@ -1,6 +1,6 @@
 [package]
 name = "x86_vcpu"
-version = "0.5.0"
+version = "0.5.1"
 edition = "2024"
 authors = [
     "Mingxian Su <aarkegz@gmail.com>",
@@ -32,10 +32,10 @@ ax-memory-addr = "0.6.1"
 ax-crate-interface = "0.5.0"
 
 axaddrspace = "0.5.1"
-axvcpu = "0.5.0"
-x86_vlapic = "0.4.2"
-axdevice_base = "0.4.2"
-axvisor_api = "0.5.0"
+axvcpu = "0.5.1"
+x86_vlapic = "0.4.3"
+axdevice_base = "0.4.3"
+axvisor_api = "0.5.1"
 
 spin = { version = "0.10", default-features = false }
 

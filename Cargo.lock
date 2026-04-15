@@ -392,7 +392,7 @@ dependencies = [
 
 [[package]]
 name = "arm_vcpu"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "aarch64-cpu 11.2.0",
  "ax-errno",
@@ -408,7 +408,7 @@ dependencies = [
 
 [[package]]
 name = "arm_vgic"
-version = "0.4.2"
+version = "0.4.3"
 dependencies = [
  "aarch64-cpu 11.2.0",
  "aarch64_sysreg",
@@ -1545,7 +1545,7 @@ dependencies = [
 
 [[package]]
 name = "axdevice"
-version = "0.4.2"
+version = "0.4.3"
 dependencies = [
  "arm_vgic",
  "ax-errno",
@@ -1562,7 +1562,7 @@ dependencies = [
 
 [[package]]
 name = "axdevice_base"
-version = "0.4.2"
+version = "0.4.3"
 dependencies = [
  "ax-errno",
  "axaddrspace",
@@ -1597,7 +1597,7 @@ dependencies = [
 
 [[package]]
 name = "axhvc"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "ax-errno",
 ]
@@ -1794,7 +1794,7 @@ dependencies = [
 
 [[package]]
 name = "axvcpu"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "ax-errno",
  "ax-memory-addr",
@@ -1805,7 +1805,7 @@ dependencies = [
 
 [[package]]
 name = "axvisor"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "aarch64-cpu-ext",
  "anyhow",
@@ -1880,7 +1880,7 @@ dependencies = [
 
 [[package]]
 name = "axvm"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "arm_vcpu",
  "arm_vgic",
@@ -1905,7 +1905,7 @@ dependencies = [
 
 [[package]]
 name = "axvmconfig"
-version = "0.4.2"
+version = "0.4.3"
 dependencies = [
  "ax-errno",
  "clap",
@@ -6484,7 +6484,7 @@ dependencies = [
 
 [[package]]
 name = "riscv_vcpu"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "ax-crate-interface",
  "ax-errno",
@@ -6509,7 +6509,7 @@ dependencies = [
 
 [[package]]
 name = "riscv_vplic"
-version = "0.4.2"
+version = "0.4.3"
 dependencies = [
  "ax-errno",
  "axaddrspace",
@@ -9443,7 +9443,7 @@ dependencies = [
 
 [[package]]
 name = "x86_vcpu"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "ax-crate-interface",
  "ax-errno",
@@ -9468,7 +9468,7 @@ dependencies = [
 
 [[package]]
 name = "x86_vlapic"
-version = "0.4.2"
+version = "0.4.3"
 dependencies = [
  "ax-errno",
  "ax-memory-addr",

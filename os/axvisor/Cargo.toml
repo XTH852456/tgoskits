@@ -2,7 +2,7 @@
 name = "axvisor"
 authors = ["Keyang Hu <keyang.hu@qq.com>", "周睿 <zrufo747@outlook.com>"]
 edition = "2024"
-version = "0.5.0"
+version = "0.5.1"
 description = "A lightweight type-1 hypervisor based on ArceOS"
 repository = "https://github.com/arceos-hypervisor/axvisor"
 homepage = "https://github.com/arceos-hypervisor/axvisor"
@@ -74,13 +74,13 @@ ax-hal = { version = "0.5.0", features = ["paging", "irq", "smp", "hv"] }
 
 # System dependent modules provided by ArceOS-Hypervisor (bare-metal only)
 axaddrspace = "0.5.1"
-axhvc = "0.4.0"
+axhvc = "0.4.1"
 # ax-runtime = { version = "=0.3.0-preview.1", features = ["alloc", "irq", "paging", "smp", "multitask"] }
-axvcpu = "0.5.0"
-axvm = "0.5.0"
-axdevice = "0.4.2"
-axdevice_base = "0.4.2"
-axvisor_api = "0.5.0"
+axvcpu = "0.5.1"
+axvm = "0.5.1"
+axdevice = "0.4.3"
+axdevice_base = "0.4.3"
+axvisor_api = "0.5.1"
 
 # System independent crates provided by ArceOS
 ax-errno = "0.4.2"
@@ -113,8 +113,8 @@ arm-gic-driver = {version = "0.17", features = ["rdif"]}
 
 [target.'cfg(target_arch = "riscv64")'.dependencies]
 riscv64-qemu-virt-hv = { version = "0.5.0", path = "platform/riscv64-qemu-virt-hv" }
-riscv_vcpu = "0.5.0"
-riscv_vplic = "0.4.2"
+riscv_vcpu = "0.5.1"
+riscv_vplic = "0.4.3"
 
 # xtask dependencies (only used on host platforms)
 [target.'cfg(any(windows, unix))'.dependencies]
