@@ -1,4 +1,6 @@
-include = [{path = ".config-local.toml", optional = true}]
+# Keep this file compatible with stable Cargo in clean checkouts.
+# For machine-local overrides, pass `--config .cargo/.config-local.toml`
+# explicitly when needed instead of relying on an optional include here.
 
 [net]
 # 使用系统 git 拉取依赖，可利用已配置的 git 凭证（如 gh auth、credential helper）
