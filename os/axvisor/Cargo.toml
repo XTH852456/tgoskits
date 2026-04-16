@@ -119,7 +119,7 @@ riscv_vplic = "0.4.3"
 # xtask dependencies (only used on host platforms)
 [target.'cfg(any(windows, unix))'.dependencies]
 anyhow.workspace = true
-axbuild = "0.4.0"
+axbuild = "0.4.1"
 clap = { version = "4.6", features = ["derive"] }
 tokio = { version = "1", features = ["full"] }
 
