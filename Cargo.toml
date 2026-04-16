@@ -325,7 +325,7 @@ ax-allocator = { path = "components/axallocator", version = "0.4.0" }
 axbacktrace = { path = "components/axbacktrace", version = "0.3.3" }
 axdevice = { path = "components/axdevice", version = "0.4.2" }
 axdevice_base = { path = "components/axdevice_base", version = "0.4.2" }
-ax-errno = { path = "components/axerrno", version = "0.4.2" }
+ax-errno = { path = "components/axerrno", version = "0.4.4" }
 axfs-ng-vfs = { path = "components/axfs-ng-vfs", version = "0.3.2" }
 axhvc = { path = "components/axhvc", version = "0.4.0" }
 ax-io = { path = "components/axio", version = "0.5.0" }
