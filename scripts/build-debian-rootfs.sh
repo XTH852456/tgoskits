@@ -9,7 +9,7 @@
 #   -a, --arch ARCH       Target architecture (default: aarch64)
 #   -s, --size SIZE       Image size (default: 2G)
 #   -o, --output PATH     Output image path (default: auto-detected from arch)
-#   -d, --debian VER      Debian suite (default: bookworm)
+#   -d, --debian VER      Debian suite (default: trixie)
 #   -p, --password PASS   Root password (default: root)
 #   -h, --help            Show this help
 #
@@ -21,7 +21,7 @@ WORKSPACE_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 # Defaults
 ARCH="aarch64"
 IMAGE_SIZE="2G"
-DEBIAN_SUITE="bookworm"
+DEBIAN_SUITE="trixie"
 ROOT_PASSWORD="root"
 OUTPUT_PATH=""
 
@@ -108,14 +108,44 @@ build_rootfs() {
         bash -c "
             set -e
 
+            # --- replace container apt source with TUNA mirror ---
+            cat > /etc/apt/sources.list <<'CONTAINER_SRC'
+deb http://mirrors4.tuna.tsinghua.edu.cn/debian/ trixie main contrib non-free non-free-firmware
+deb-src http://mirrors4.tuna.tsinghua.edu.cn/debian/ trixie main contrib non-free non-free-firmware
+
+deb http://mirrors4.tuna.tsinghua.edu.cn/debian/ trixie-updates main contrib non-free non-free-firmware
+deb-src http://mirrors4.tuna.tsinghua.edu.cn/debian/ trixie-updates main contrib non-free non-free-firmware
+
+deb http://mirrors4.tuna.tsinghua.edu.cn/debian/ trixie-backports main contrib non-free non-free-firmware
+deb-src http://mirrors4.tuna.tsinghua.edu.cn/debian/ trixie-backports main contrib non-free non-free-firmware
+
+deb http://mirrors4.tuna.tsinghua.edu.cn/debian-security trixie-security main contrib non-free non-free-firmware
+deb-src http://mirrors4.tuna.tsinghua.edu.cn/debian-security trixie-security main contrib non-free non-free-firmware
+CONTAINER_SRC
+
             apt-get update
             apt-get install -y debootstrap e2fsprogs busybox-static
 
             # --- debootstrap ---
             debootstrap --arch=$DEB_ARCH --variant=minbase --no-merged-usr \
-                $DEBIAN_SUITE /rootfs http://deb.debian.org/debian
+                $DEBIAN_SUITE /rootfs http://mirrors.tuna.tsinghua.edu.cn/debian
 
             ROOTFS=/rootfs
+
+            # --- sources.list (use TUNA mirror) ---
+            cat > \$ROOTFS/etc/apt/sources.list <<'SOURCES'
+deb http://mirrors4.tuna.tsinghua.edu.cn/debian/ trixie main contrib non-free non-free-firmware
+deb-src http://mirrors4.tuna.tsinghua.edu.cn/debian/ trixie main contrib non-free non-free-firmware
+
+deb http://mirrors4.tuna.tsinghua.edu.cn/debian/ trixie-updates main contrib non-free non-free-firmware
+deb-src http://mirrors4.tuna.tsinghua.edu.cn/debian/ trixie-updates main contrib non-free non-free-firmware
+
+deb http://mirrors4.tuna.tsinghua.edu.cn/debian/ trixie-backports main contrib non-free non-free-firmware
+deb-src http://mirrors4.tuna.tsinghua.edu.cn/debian/ trixie-backports main contrib non-free non-free-firmware
+
+deb http://mirrors4.tuna.tsinghua.edu.cn/debian-security trixie-security main contrib non-free non-free-firmware
+deb-src http://mirrors4.tuna.tsinghua.edu.cn/debian-security trixie-security main contrib non-free non-free-firmware
+SOURCES
 
             # --- hostname ---
             echo 'starry' > \$ROOTFS/etc/hostname
@@ -223,6 +253,8 @@ RESOLV
         "${DOCKER_ARCH}/debian:${DEBIAN_SUITE}" \
         bash -c "
             set -e
+            echo 'deb http://mirrors.tuna.tsinghua.edu.cn/debian/ $DEBIAN_SUITE main' > /etc/apt/sources.list
+            apt-get update && apt-get install -y e2fsprogs >/dev/null 2>&1
             cd /output
             dd if=/dev/zero of=$output_file bs=1 count=0 seek=$IMAGE_SIZE 2>/dev/null
             mkfs.ext4 -F -L starry-rootfs $output_file
