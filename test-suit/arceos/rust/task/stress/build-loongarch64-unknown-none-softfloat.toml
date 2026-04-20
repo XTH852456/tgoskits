@@ -1,6 +1,6 @@
 features = ["ax-std"]
-log = "Error"
-max_cpu_num = 4
+log = "Warn"
+max_cpu_num = 8
 
 [env]
 AX_GW = "10.0.2.2"

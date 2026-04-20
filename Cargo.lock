@@ -358,6 +358,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "arceos-stress"
+version = "0.1.0"
+dependencies = [
+ "ax-std",
+]
+
+[[package]]
 name = "arceos-tls"
 version = "0.3.1"
 dependencies = [
