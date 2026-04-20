@@ -17,7 +17,7 @@ use zerocopy::{Immutable, IntoBytes};
 
 use crate::{
     file::{FileLike, IoDst, IoSrc},
-    task::AsThread,
+    task::{AsThread, ProcessData},
 };
 
 /// The size of signalfd_siginfo structure (128 bytes as per Linux
@@ -83,14 +83,17 @@ pub struct Signalfd {
     mask: RwLock<SignalSet>,
     non_blocking: AtomicBool,
     poll_rx: PollSet,
+    /// Process-level event set, woken when any signal is delivered.
+    signal_event: Arc<PollSet>,
 }
 
 impl Signalfd {
-    pub fn new(mask: SignalSet) -> Arc<Self> {
+    pub fn new(proc_data: &Arc<ProcessData>, mask: SignalSet) -> Arc<Self> {
         Arc::new(Self {
             mask: RwLock::new(mask),
             non_blocking: AtomicBool::new(false),
             poll_rx: PollSet::new(),
+            signal_event: proc_data.signal_event.clone(),
         })
     }
 
@@ -177,6 +180,9 @@ impl Pollable for Signalfd {
     fn register(&self, context: &mut Context<'_>, events: IoEvents) {
         if events.contains(IoEvents::IN) {
             self.poll_rx.register(context.waker());
+            // Also register on the process-level signal_event so that
+            // send_signal_to_process() wakes us when a signal arrives.
+            self.signal_event.register(context.waker());
         }
     }
 }

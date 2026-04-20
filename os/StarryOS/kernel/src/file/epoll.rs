@@ -363,8 +363,13 @@ impl Epoll {
     }
 
     pub fn poll_events(&self, out: &mut [epoll_event]) -> AxResult<usize> {
-        trace!("Epoll: poll_events called, out.len()={}", out.len());
         let mut count = 0;
+        // Collect LT (level-triggered) interests to re-queue after the loop.
+        // This prevents the same interest from being processed multiple times
+        // within a single poll_events call (which caused the same fd to fill
+        // the entire output buffer).
+        let mut requeue: VecDeque<Weak<EpollInterest>> = VecDeque::new();
+
         loop {
             let weak_interest = {
                 let mut queue = self.inner.ready_queue.lock();
@@ -391,11 +396,6 @@ impl Epoll {
                 continue;
             };
 
-            trace!(
-                "Epoll: consuming ready interest for fd={}, events={:?}",
-                interest.key.fd, interest.event.events
-            );
-
             match interest.consume(file.as_ref()) {
                 ConsumeResult::EventAndKeep(event) => {
                     out[count] = epoll_event {
@@ -403,10 +403,8 @@ impl Epoll {
                         data: event.user_data,
                     };
                     count += 1;
-                    self.inner
-                        .ready_queue
-                        .lock()
-                        .push_back(Arc::downgrade(&interest));
+                    // Don't push back immediately — collect for later.
+                    requeue.push_back(Arc::downgrade(&interest));
                 }
                 ConsumeResult::EventAndRemove(event) => {
                     out[count] = epoll_event {
@@ -422,6 +420,11 @@ impl Epoll {
                     self.register_waker_only(&interest);
                 }
             }
+        }
+
+        // Re-queue LT interests so they're checked on the next epoll_wait.
+        if !requeue.is_empty() {
+            self.inner.ready_queue.lock().extend(requeue);
         }
 
         if count == 0 {

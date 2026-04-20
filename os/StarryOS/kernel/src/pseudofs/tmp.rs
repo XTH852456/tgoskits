@@ -54,15 +54,22 @@ impl Borrow<str> for FileName {
 pub struct MemoryFs {
     inodes: Mutex<Slab<Arc<Inode>>>,
     root: Mutex<Option<DirEntry>>,
+    fs_type: u32,
 }
 
 impl MemoryFs {
     /// Creates a new empty memory filesystem.
     #[allow(clippy::new_ret_no_self)]
     pub fn new() -> Filesystem {
+        Self::new_with_fs_type(0x01021994)
+    }
+
+    /// Creates a new empty memory filesystem with a custom fs_type for statfs.
+    pub fn new_with_fs_type(fs_type: u32) -> Filesystem {
         let fs = Arc::new(Self {
             inodes: Mutex::new(Slab::new()),
             root: Mutex::default(),
+            fs_type,
         });
         let root_ino = Inode::new(
             &fs,
@@ -92,7 +99,7 @@ impl FilesystemOps for MemoryFs {
     }
 
     fn stat(&self) -> VfsResult<StatFs> {
-        Ok(dummy_stat_fs(0x01021994))
+        Ok(dummy_stat_fs(self.fs_type))
     }
 }
 

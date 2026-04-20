@@ -207,6 +207,9 @@ pub struct ProcessData {
     pub child_exit_event: Arc<PollSet>,
     /// Self exit event
     pub exit_event: Arc<PollSet>,
+    /// Woken when any signal is delivered to this process.
+    /// Used by signalfd to detect pending signals via epoll.
+    pub signal_event: Arc<PollSet>,
     /// The exit signal of the thread
     pub exit_signal: Option<Signo>,
 
@@ -242,6 +245,7 @@ impl ProcessData {
 
             child_exit_event: Arc::default(),
             exit_event: Arc::default(),
+            signal_event: Arc::default(),
             exit_signal,
 
             signal: Arc::new(ProcessSignalManager::new(

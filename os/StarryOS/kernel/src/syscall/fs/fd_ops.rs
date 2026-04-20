@@ -121,7 +121,11 @@ pub fn sys_openat(
     mode: __kernel_mode_t,
 ) -> AxResult<isize> {
     let path = vm_load_string(path)?;
-    debug!("sys_openat <= {dirfd} {path:?} {flags:#o} {mode:#o}");
+    if path.contains("cgroup") || path.contains("init.scope") {
+        warn!("sys_openat <= {dirfd} {path:?} {flags:#o} {mode:#o}");
+    } else {
+        debug!("sys_openat <= {dirfd} {path:?} {flags:#o} {mode:#o}");
+    }
 
     let mode = mode & !current().as_thread().proc_data.umask();
 

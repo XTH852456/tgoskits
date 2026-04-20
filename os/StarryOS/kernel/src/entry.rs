@@ -19,7 +19,6 @@ use crate::{
 /// Initialize and run initproc.
 pub fn init(args: &[String], envs: &[String]) {
     pseudofs::mount_all().expect("Failed to mount pseudofs");
-    spawn_alarm_task();
 
     let loc = FS_CONTEXT
         .lock()
@@ -42,11 +41,14 @@ pub fn init(args: &[String], envs: &[String]) {
 
     let uctx = UserContext::new(entry_vaddr.into(), ustack_top, 0);
     let mut task = new_user_task(name, uctx, 0);
+    let tid = task.id().as_u64() as Pid;
     task.ctx_mut().set_page_table_root(uspace.page_table_root());
 
-    let pid = task.id().as_u64() as Pid;
+    // Force init process PID to 1 — required by systemd and standard init.
+    // The thread TID (assigned by the task system) may differ from the PID.
+    let pid: Pid = 1;
     let proc = Process::new_init(pid);
-    proc.add_thread(pid);
+    proc.add_thread(tid);
 
     N_TTY.bind_to(&proc).expect("Failed to bind ntty");
 
@@ -65,8 +67,11 @@ pub fn init(args: &[String], envs: &[String]) {
             .expect("Failed to add stdio");
     }
 
-    let thr = Thread::new(pid, proc);
+    let thr = Thread::new(tid, proc);
     *task.task_ext_mut() = Some(AxTaskExt::from_impl(thr));
+
+    // Spawn alarm task AFTER init proc PID is assigned, to avoid PID conflicts
+    spawn_alarm_task();
 
     let task = spawn_task(task);
     add_task_to_table(&task);

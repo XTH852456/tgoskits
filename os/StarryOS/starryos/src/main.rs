@@ -6,7 +6,7 @@ extern crate alloc;
 
 use alloc::{borrow::ToOwned, vec::Vec};
 
-pub const CMDLINE: &[&str] = &["/bin/sh", "-c", include_str!("init.sh")];
+pub const CMDLINE: &[&str] = &["/sbin/init"];
 
 #[unsafe(no_mangle)]
 fn main() {

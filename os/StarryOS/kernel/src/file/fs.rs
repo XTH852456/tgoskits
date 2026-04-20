@@ -57,7 +57,7 @@ pub fn resolve_at(dirfd: c_int, path: Option<&str>, flags: u32) -> AxResult<Reso
             let file_like = get_file_like(dirfd)?;
             let f = file_like.clone();
             Ok(if let Some(file) = f.downcast_ref::<File>() {
-                ResolveAtResult::File(file.inner().backend()?.location().clone())
+                ResolveAtResult::File(file.inner().location().clone())
             } else if let Some(dir) = f.downcast_ref::<Directory>() {
                 ResolveAtResult::File(dir.inner().clone())
             } else {
@@ -152,7 +152,7 @@ impl FileLike for File {
     }
 
     fn ioctl(&self, cmd: u32, arg: usize) -> AxResult<usize> {
-        self.inner().backend()?.location().ioctl(cmd, arg)
+        self.inner().location().ioctl(cmd, arg)
     }
 
     fn set_nonblocking(&self, flag: bool) -> AxResult {
@@ -236,7 +236,9 @@ impl FileLike for Directory {
 }
 impl Pollable for Directory {
     fn poll(&self) -> IoEvents {
-        IoEvents::IN | IoEvents::OUT
+        // Directories are always writable but should not report IN via
+        // epoll, otherwise level-triggered epoll will spin forever.
+        IoEvents::OUT
     }
 
     fn register(&self, _context: &mut Context<'_>, _events: IoEvents) {}

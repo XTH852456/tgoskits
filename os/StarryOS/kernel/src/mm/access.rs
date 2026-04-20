@@ -264,10 +264,34 @@ fn handle_page_fault(vaddr: VirtAddr, access_flags: MappingFlags) -> bool {
         return false;
     }
 
-    thr.proc_data
+    // IRQs may be disabled if we entered from Vm(IrqSave) during user memory
+    // access. The COW page fault path may need to read from the page cache,
+    // which requires acquiring a sleeping mutex. Re-enable IRQs to allow
+    // sleeping in the page fault handler.
+    let irq_was_enabled = ax_hal::asm::irqs_enabled();
+    if !irq_was_enabled {
+        // SAFETY: we are in a synchronous exception from kernel mode (accessing
+        // user memory), not in a hardware IRQ handler. Re-enabling IRQs here is
+        // safe because the page fault handler will not corrupt any interrupt state.
+        unsafe {
+            ax_hal::asm::enable_irqs();
+        }
+    }
+
+    let result = thr
+        .proc_data
         .aspace
         .lock()
-        .handle_page_fault(vaddr, access_flags)
+        .handle_page_fault(vaddr, access_flags);
+
+    // Restore IRQ state: if IRQs were previously disabled by IrqSave, the
+    // IrqSave guard will restore them when Vm is dropped. But we must ensure
+    // IRQs are re-disabled here so the IrqSave drop doesn't double-enable.
+    if !irq_was_enabled {
+        ax_hal::asm::disable_irqs();
+    }
+
+    result
 }
 
 pub fn vm_load_string(ptr: *const c_char) -> AxResult<String> {

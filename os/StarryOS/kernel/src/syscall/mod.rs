@@ -39,6 +39,12 @@ pub fn handle_syscall(uctx: &mut UserContext) {
         #[cfg(target_arch = "x86_64")]
         Sysno::mkdir => sys_mkdir(uctx.arg0() as _, uctx.arg1() as _),
         Sysno::mkdirat => sys_mkdirat(uctx.arg0() as _, uctx.arg1() as _, uctx.arg2() as _),
+        Sysno::mknodat => sys_mknodat(
+            uctx.arg0() as _,
+            uctx.arg1() as _,
+            uctx.arg2() as _,
+            uctx.arg3() as _,
+        ),
         Sysno::getdents64 => sys_getdents64(uctx.arg0() as _, uctx.arg1() as _, uctx.arg2() as _),
         #[cfg(target_arch = "x86_64")]
         Sysno::link => sys_link(uctx.arg0() as _, uctx.arg1() as _),
@@ -441,6 +447,7 @@ pub fn handle_syscall(uctx: &mut UserContext) {
         Sysno::exit => sys_exit(uctx.arg0() as _),
         Sysno::exit_group => sys_exit_group(uctx.arg0() as _),
         Sysno::wait4 => sys_waitpid(uctx.arg0() as _, uctx.arg1() as _, uctx.arg2() as _),
+        Sysno::waitid => sys_waitid(uctx.arg0() as _, uctx.arg1() as _, uctx.arg2() as _, uctx.arg3() as _),
         Sysno::getsid => sys_getsid(uctx.arg0() as _),
         Sysno::setsid => sys_setsid(),
         Sysno::getpgid => sys_getpgid(uctx.arg0() as _),
@@ -630,8 +637,7 @@ pub fn handle_syscall(uctx: &mut UserContext) {
         ),
 
         // dummy fds
-        Sysno::timerfd_create
-        | Sysno::fanotify_init
+        Sysno::fanotify_init
         | Sysno::inotify_init1
         | Sysno::userfaultfd
         | Sysno::perf_event_open
@@ -642,10 +648,35 @@ pub fn handle_syscall(uctx: &mut UserContext) {
         | Sysno::open_tree
         | Sysno::memfd_secret => sys_dummy_fd(sysno),
 
+        Sysno::timerfd_create => crate::file::timerfd::sys_timerfd_create(uctx.arg0() as _, uctx.arg1() as _),
+        Sysno::timerfd_settime => crate::file::timerfd::sys_timerfd_settime(
+            uctx.arg0() as _,
+            uctx.arg1() as _,
+            uctx.arg2() as *const _,
+            uctx.arg3() as *mut _,
+        ),
+        Sysno::timerfd_gettime => crate::file::timerfd::sys_timerfd_gettime(
+            uctx.arg0() as _,
+            uctx.arg1() as *mut _,
+        ),
+
         Sysno::timer_create | Sysno::timer_gettime | Sysno::timer_settime => Ok(0),
+
+        // Namespace stubs — return success so systemd's sandbox setup doesn't fail
+        Sysno::unshare | Sysno::setns => Ok(0),
 
         // sync_file_range: return success (no-op, same as fsync for directories)
         Sysno::sync_file_range => Ok(0),
+
+        // inotify stubs: return fake watch descriptor to silence systemd warnings
+        Sysno::inotify_add_watch | Sysno::inotify_rm_watch => Ok(1),
+
+        // syscalls that need ENOSYS for userspace to fall back gracefully
+        Sysno::name_to_handle_at
+        | Sysno::settimeofday
+        | Sysno::fsconfig
+        | Sysno::fsmount
+        | Sysno::fspick => Err(AxError::Unsupported),
 
         // Known benign unimplemented syscalls (glibc handles ENOSYS gracefully)
         Sysno::rseq => {

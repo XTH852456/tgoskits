@@ -2,9 +2,10 @@ pub mod epoll;
 pub mod event;
 mod fs;
 mod net;
-mod pidfd;
+pub mod pidfd;
 mod pipe;
 pub mod signalfd;
+pub mod timerfd;
 
 use alloc::{borrow::Cow, sync::Arc};
 use core::{ffi::c_int, time::Duration};
@@ -95,6 +96,18 @@ impl From<Kstat> for statx {
     fn from(value: Kstat) -> Self {
         // SAFETY: valid for statx
         let mut statx: statx = unsafe { core::mem::zeroed() };
+        statx.stx_mask = linux_raw_sys::general::STATX_TYPE
+            | linux_raw_sys::general::STATX_MODE
+            | linux_raw_sys::general::STATX_NLINK
+            | linux_raw_sys::general::STATX_UID
+            | linux_raw_sys::general::STATX_GID
+            | linux_raw_sys::general::STATX_ATIME
+            | linux_raw_sys::general::STATX_MTIME
+            | linux_raw_sys::general::STATX_CTIME
+            | linux_raw_sys::general::STATX_INO
+            | linux_raw_sys::general::STATX_SIZE
+            | linux_raw_sys::general::STATX_BLOCKS
+            | linux_raw_sys::general::STATX_MNT_ID;
         statx.stx_blksize = value.blksize as _;
         statx.stx_attributes = value.mode as _;
         statx.stx_nlink = value.nlink as _;
@@ -120,6 +133,10 @@ impl From<Kstat> for statx {
 
         statx.stx_dev_major = (value.dev >> 32) as _;
         statx.stx_dev_minor = value.dev as _;
+
+        // Use a single mount ID for all filesystems — systemd needs this
+        // to determine that the root fd is the actual root via statx_mount_same().
+        statx.stx_mnt_id = 1;
 
         statx
     }

@@ -69,7 +69,7 @@ impl TryFrom<Clone3Args> for CloneArgs {
 }
 
 pub fn sys_clone3(uctx: &UserContext, args: *const u8, size: usize) -> AxResult<isize> {
-    debug!("sys_clone3 <= args: {args:p}, size: {size}");
+    warn!("sys_clone3 <= args: {args:p}, size: {size}");
 
     if size < MIN_CLONE_ARGS_SIZE {
         warn!("sys_clone3: size {size} too small, minimum is {MIN_CLONE_ARGS_SIZE}");

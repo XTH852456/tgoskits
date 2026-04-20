@@ -26,7 +26,7 @@ use crate::{
 /// The ioctl() system call manipulates the underlying device parameters
 /// of special files.
 pub fn sys_ioctl(fd: i32, cmd: u32, arg: usize) -> AxResult<isize> {
-    debug!("sys_ioctl <= fd: {fd}, cmd: {cmd}, arg: {arg}");
+    warn!("sys_ioctl <= fd: {fd}, cmd: 0x{cmd:08X}, arg: {arg}");
     let f = get_file_like(fd)?;
     if cmd == FIONBIO {
         let val = (arg as *const u8).vm_read()?;
@@ -88,23 +88,88 @@ pub fn sys_chroot(path: *const c_char) -> AxResult<isize> {
 
 pub fn sys_mkdirat(dirfd: i32, path: *const c_char, mode: u32) -> AxResult<isize> {
     let path = vm_load_string(path)?;
-    debug!("sys_mkdirat <= dirfd: {dirfd}, path: {path}, mode: {mode}");
+    warn!("sys_mkdirat <= dirfd: {dirfd}, path: {path}, mode: {mode}");
 
     let mode = mode & !current().as_thread().proc_data.umask();
     let mode = NodePermission::from_bits_truncate(mode as u16);
 
     with_fs(dirfd, |fs| {
+        // Debug: try resolving parent path to check mount point crossing
+        if let Some(parent) = path.rfind('/') {
+            let parent_path = &path[..parent.max(1)];
+            match fs.resolve(parent_path) {
+                Ok(loc) => {
+                    warn!("sys_mkdirat: resolved parent '{parent_path}' -> mountpoint={}, is_mountpoint={}",
+                        loc.mountpoint().device(),
+                        loc.is_mountpoint());
+                    if let Ok(abs) = loc.absolute_path() {
+                        warn!("sys_mkdirat: parent absolute_path={abs}");
+                    }
+                }
+                Err(e) => {
+                    warn!("sys_mkdirat: failed to resolve parent '{parent_path}': {e:?}");
+                }
+            }
+        }
+
         // If the path already exists as a directory, succeed (like Linux does for mkdir("."))
         if let Ok(entry) = fs.resolve(&path) {
+            warn!("sys_mkdirat: '{path}' already exists, node_type={:?}", entry.node_type());
             if entry.node_type() == NodeType::Directory {
                 return Ok(0);
             } else {
                 return Err(AxError::AlreadyExists);
             }
         }
-        fs.create_dir(path, mode)?;
+        warn!("sys_mkdirat: '{path}' does not exist, calling create_dir");
+        fs.create_dir(&path, mode).map_err(|e| {
+            warn!("sys_mkdirat create_dir failed for '{path}': {e:?}");
+            e
+        })?;
+        warn!("sys_mkdirat: '{path}' created successfully");
         Ok(0)
     })
+}
+
+pub fn sys_mknodat(
+    dirfd: i32,
+    path: *const c_char,
+    mode: u32,
+    dev: u32,
+) -> AxResult<isize> {
+    let path = vm_load_string(path)?;
+    debug!("sys_mknodat <= dirfd: {dirfd}, path: {path}, mode: {mode:#o}, dev: {dev}");
+
+    let file_type = mode & !0o777;
+    let perm = mode & 0o777 & !current().as_thread().proc_data.umask();
+    let perm = NodePermission::from_bits_truncate(perm as u16);
+
+    match file_type {
+        S_IFIFO => with_fs(dirfd, |fs| {
+            let (dir, name) = fs.resolve_nonexistent(Path::new(&path))?;
+            dir.create(&name, NodeType::Fifo, perm)?;
+            Ok(0)
+        }),
+        S_IFREG => with_fs(dirfd, |fs| {
+            let (dir, name) = fs.resolve_nonexistent(Path::new(&path))?;
+            dir.create(&name, NodeType::RegularFile, perm)?;
+            Ok(0)
+        }),
+        S_IFCHR | S_IFBLK => {
+            // Device nodes: just succeed, actual device handling is in devfs
+            debug!("sys_mknodat: device node {path} (dev={dev:#x}), returning success");
+            Ok(0)
+        }
+        S_IFSOCK => {
+            // Unix domain socket: just succeed since AF_UNIX is not supported
+            debug!("sys_mknodat: socket {path}, returning success");
+            Ok(0)
+        }
+        _ => {
+            warn!("sys_mknodat: unsupported file type {file_type:#o} for {path}");
+            Err(AxError::Unsupported)
+        }
+    }
 }
 
 // Directory buffer for getdents64 syscall

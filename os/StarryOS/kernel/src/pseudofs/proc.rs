@@ -19,12 +19,12 @@ use indoc::indoc;
 use starry_process::Process;
 
 use crate::{
-    file::FD_TABLE,
+    file::{PidFd, FD_TABLE},
     pseudofs::{
         DirMaker, DirMapping, NodeOpsMux, RwFile, SimpleDir, SimpleDirOps, SimpleFile,
         SimpleFileOperation, SimpleFs,
     },
-    task::{AsThread, TaskStat, get_task, tasks},
+    task::{AsThread, TaskStat, get_process_data, get_task, processes, tasks},
 };
 
 const DUMMY_MEMINFO: &str = indoc! {"
@@ -133,16 +133,21 @@ impl SimpleDirOps for ProcessTaskDir {
 
 #[rustfmt::skip]
 fn task_status(task: &AxTaskRef) -> String {
+    let proc = &task.as_thread().proc_data.proc;
+    let ppid = proc.parent().map(|p| p.pid()).unwrap_or(0);
     format!(
-        "Tgid:\t{}\n\
+        "Name:\t{}\n\
+        Tgid:\t{}\n\
         Pid:\t{}\n\
+        PPid:\t{ppid}\n\
         Uid:\t0 0 0 0\n\
         Gid:\t0 0 0 0\n\
         Cpus_allowed:\t1\n\
         Cpus_allowed_list:\t0\n\
         Mems_allowed:\t1\n\
         Mems_allowed_list:\t0",
-        task.as_thread().proc_data.proc.pid(),
+        task.id_name(),
+        proc.pid(),
         task.id().as_u64()
     )
 }
@@ -151,6 +156,58 @@ fn task_status(task: &AxTaskRef) -> String {
 struct ThreadFdDir {
     fs: Arc<SimpleFs>,
     task: WeakAxTaskRef,
+}
+
+/// The /proc/[pid]/fdinfo directory
+struct ThreadFdInfoDir {
+    fs: Arc<SimpleFs>,
+    task: WeakAxTaskRef,
+}
+
+impl SimpleDirOps for ThreadFdInfoDir {
+    fn child_names<'a>(&'a self) -> Box<dyn Iterator<Item = Cow<'a, str>> + 'a> {
+        let Some(task) = self.task.upgrade() else {
+            return Box::new(iter::empty());
+        };
+        let ids = FD_TABLE
+            .scope(&task.as_thread().proc_data.scope.read())
+            .read()
+            .ids()
+            .map(|id| Cow::Owned(id.to_string()))
+            .collect::<Vec<_>>();
+        Box::new(ids.into_iter())
+    }
+
+    fn lookup_child(&self, name: &str) -> VfsResult<NodeOpsMux> {
+        let fs = self.fs.clone();
+        let task = self.task.upgrade().ok_or(VfsError::NotFound)?;
+        let fd = name.parse::<u32>().map_err(|_| VfsError::NotFound)?;
+        let file_obj = FD_TABLE
+            .scope(&task.as_thread().proc_data.scope.read())
+            .read()
+            .get(fd as usize)
+            .ok_or(VfsError::NotFound)?
+            .inner
+            .clone();
+
+        // For pidfd, extract the target PID
+        let pidfd_pid = file_obj.as_ref().downcast_ref::<PidFd>()
+            .and_then(|pidfd| pidfd.process_data().ok())
+            .map(|pd| pd.proc.pid());
+
+        Ok(SimpleFile::new_regular(fs, move || {
+            if let Some(target_pid) = pidfd_pid {
+                Ok(format!("Pid:\t{target_pid}\nNSpid:\t{target_pid}\n").into_bytes())
+            } else {
+                Ok("".into())
+            }
+        })
+        .into())
+    }
+
+    fn is_cacheable(&self) -> bool {
+        false
+    }
 }
 
 impl SimpleDirOps for ThreadFdDir {
@@ -207,6 +264,8 @@ impl SimpleDirOps for ThreadDir {
                 "comm",
                 "exe",
                 "fd",
+                "fdinfo",
+                "cgroup",
             ]
             .into_iter()
             .map(Cow::Borrowed),
@@ -218,7 +277,11 @@ impl SimpleDirOps for ThreadDir {
         let task = self.task.upgrade().ok_or(VfsError::NotFound)?;
         Ok(match name {
             "stat" => SimpleFile::new_regular(fs, move || {
-                Ok(format!("{}", TaskStat::from_thread(&task)?).into_bytes())
+                let result = TaskStat::from_thread(&task);
+                if let Err(ref e) = result {
+                    warn!("procfs: /proc/{}/stat read failed: {:?}", task.as_thread().proc_data.proc.pid(), e);
+                }
+                Ok(format!("{}", result?).into_bytes())
             })
             .into(),
             "status" => SimpleFile::new_regular(fs, move || Ok(task_status(&task))).into(),
@@ -312,6 +375,70 @@ impl SimpleDirOps for ThreadDir {
                 }),
             )
             .into(),
+            "fdinfo" => SimpleDir::new_maker(
+                fs.clone(),
+                Arc::new(ThreadFdInfoDir {
+                    fs,
+                    task: Arc::downgrade(&task),
+                }),
+            )
+            .into(),
+            "cgroup" => SimpleFile::new_regular(fs, move || {
+                Ok("0::/\n")
+            })
+            .into(),
+            _ => return Err(VfsError::NotFound),
+        })
+    }
+
+    fn is_cacheable(&self) -> bool {
+        false
+    }
+}
+
+/// Minimal directory for zombie/exited processes that no longer have a live task.
+/// Only exposes basic entries (stat, status, cgroup) with limited info.
+struct ZombieProcessDir {
+    fs: Arc<SimpleFs>,
+    proc: Arc<Process>,
+}
+
+impl SimpleDirOps for ZombieProcessDir {
+    fn child_names<'a>(&'a self) -> Box<dyn Iterator<Item = Cow<'a, str>> + 'a> {
+        Box::new(
+            ["stat", "status", "cgroup", "cmdline", "exe", "fd"]
+                .into_iter()
+                .map(Cow::Borrowed),
+        )
+    }
+
+    fn lookup_child(&self, name: &str) -> VfsResult<NodeOpsMux> {
+        let fs = self.fs.clone();
+        let proc = self.proc.clone();
+        Ok(match name {
+            "stat" => SimpleFile::new_regular(fs, move || {
+                let pid = proc.pid();
+                let state = if proc.is_zombie() { "Z" } else { "S" };
+                let ppid = proc.parent().map(|p| p.pid()).unwrap_or(0);
+                Ok(format!("{pid} ({state}) {ppid}\n").into_bytes())
+            })
+            .into(),
+            "status" => SimpleFile::new_regular(fs, move || {
+                let pid = proc.pid();
+                let ppid = proc.parent().map(|p| p.pid()).unwrap_or(0);
+                Ok(format!(
+                    "Tgid:\t{pid}\n\
+                    Pid:\t{pid}\n\
+                    PPid:\t{ppid}\n\
+                    Uid:\t0 0 0 0\n\
+                    Gid:\t0 0 0 0\n"
+                ))
+            })
+            .into(),
+            "cgroup" => SimpleFile::new_regular(fs, move || Ok("0::/\n")).into(),
+            "cmdline" => SimpleFile::new_regular(fs, move || Ok(Vec::<u8>::new())).into(),
+            "exe" => SimpleFile::new(fs, NodeType::Symlink, move || Ok(String::new())).into(),
+            "fd" => SimpleDir::new_maker(fs, Arc::new(DirMapping::new())).into(),
             _ => return Err(VfsError::NotFound),
         })
     }
@@ -326,29 +453,91 @@ struct ProcFsHandler(Arc<SimpleFs>);
 
 impl SimpleDirOps for ProcFsHandler {
     fn child_names<'a>(&'a self) -> Box<dyn Iterator<Item = Cow<'a, str>> + 'a> {
-        Box::new(
-            tasks()
-                .into_iter()
-                .map(|task| task.id().as_u64().to_string().into())
-                .chain([Cow::Borrowed("self")]),
-        )
+        // Collect task-based names
+        let mut names: Vec<Cow<'a, str>> = tasks()
+            .into_iter()
+            .map(|task| task.id().as_u64().to_string().into())
+            .collect();
+
+        // Add zombie processes not already listed (from process table)
+        for proc_data in processes() {
+            let pid = proc_data.proc.pid().to_string();
+            if !names.iter().any(|n| *n == pid) {
+                names.push(pid.into());
+            }
+        }
+
+        // Also add children of current process (may include zombies)
+        let curr = current();
+        for child in curr.as_thread().proc_data.proc.children() {
+            let pid = child.pid().to_string();
+            if !names.iter().any(|n| *n == pid) {
+                names.push(pid.into());
+            }
+        }
+
+        names.push(Cow::Borrowed("self"));
+        Box::new(names.into_iter())
     }
 
     fn lookup_child(&self, name: &str) -> VfsResult<NodeOpsMux> {
-        let task = if name == "self" {
-            current().clone()
-        } else {
-            let tid = name.parse::<u32>().map_err(|_| VfsError::NotFound)?;
-            get_task(tid).map_err(|_| VfsError::NotFound)?
-        };
-        let node = NodeOpsMux::Dir(SimpleDir::new_maker(
-            self.0.clone(),
-            Arc::new(ThreadDir {
-                fs: self.0.clone(),
-                task: Arc::downgrade(&task),
-            }),
-        ));
-        Ok(node)
+        if name == "self" {
+            let task = current().clone();
+            let node = NodeOpsMux::Dir(SimpleDir::new_maker(
+                self.0.clone(),
+                Arc::new(ThreadDir {
+                    fs: self.0.clone(),
+                    task: Arc::downgrade(&task),
+                }),
+            ));
+            return Ok(node);
+        }
+
+        let pid = name.parse::<u32>().map_err(|_| VfsError::NotFound)?;
+
+        // Try live task first
+        if let Ok(task) = get_task(pid) {
+            warn!("procfs: lookup /proc/{pid} found live task");
+            let node = NodeOpsMux::Dir(SimpleDir::new_maker(
+                self.0.clone(),
+                Arc::new(ThreadDir {
+                    fs: self.0.clone(),
+                    task: Arc::downgrade(&task),
+                }),
+            ));
+            return Ok(node);
+        }
+
+        // Fallback: check process table for zombie/exited processes
+        if let Ok(proc_data) = get_process_data(pid) {
+            warn!("procfs: lookup /proc/{pid} found in process table, zombie={}", proc_data.proc.is_zombie());
+            let node = NodeOpsMux::Dir(SimpleDir::new_maker(
+                self.0.clone(),
+                Arc::new(ZombieProcessDir {
+                    fs: self.0.clone(),
+                    proc: proc_data.proc.clone(),
+                }),
+            ));
+            return Ok(node);
+        }
+
+        // Fallback: search current process children for zombie matching this pid
+        let curr = current();
+        warn!("procfs: lookup /proc/{pid} NOT found in task/process tables, searching children");
+        let curr_proc = &curr.as_thread().proc_data.proc;
+        if let Some(child) = curr_proc.children().into_iter().find(|c| c.pid() == pid) {
+            let node = NodeOpsMux::Dir(SimpleDir::new_maker(
+                self.0.clone(),
+                Arc::new(ZombieProcessDir {
+                    fs: self.0.clone(),
+                    proc: child,
+                }),
+            ));
+            return Ok(node);
+        }
+
+        warn!("procfs: lookup /proc/{pid} NOT FOUND at all");
+        Err(VfsError::NotFound)
     }
 
     fn is_cacheable(&self) -> bool {
@@ -363,6 +552,10 @@ fn builder(fs: Arc<SimpleFs>) -> DirMaker {
         SimpleFile::new_regular(fs.clone(), || {
             Ok("proc /proc proc rw,nosuid,nodev,noexec,relatime 0 0\n")
         }),
+    );
+    root.add(
+        "cmdline",
+        SimpleFile::new_regular(fs.clone(), || Ok("console=ttyAMA0 systemd.mask=serial-getty@ttyS0.service")),
     );
     root.add(
         "meminfo",

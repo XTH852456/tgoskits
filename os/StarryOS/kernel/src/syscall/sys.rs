@@ -80,6 +80,13 @@ pub fn sys_sysinfo(info: *mut sysinfo) -> AxResult<isize> {
     let mut kinfo: sysinfo = unsafe { core::mem::zeroed() };
     kinfo.procs = processes().len() as _;
     kinfo.mem_unit = 1;
+
+    let totalram: u64 = ax_hal::mem::memory_regions()
+        .filter(|r| r.flags.contains(ax_hal::mem::MemRegionFlags::READ | ax_hal::mem::MemRegionFlags::WRITE))
+        .map(|r| r.size as u64)
+        .sum();
+    kinfo.totalram = totalram;
+
     info.vm_write(kinfo)?;
     Ok(0)
 }

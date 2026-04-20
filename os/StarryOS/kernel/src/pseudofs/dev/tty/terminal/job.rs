@@ -69,7 +69,9 @@ impl JobControl {
 
     pub fn set_session(&self, session: &Arc<Session>) {
         let mut guard = self.session.lock();
-        assert!(guard.upgrade().is_none());
+        if guard.upgrade().is_some() {
+            warn!("set_session: overwriting existing session");
+        }
         *guard = Arc::downgrade(session);
     }
 }

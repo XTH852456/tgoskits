@@ -5,7 +5,8 @@ use ax_errno::{AxError, AxResult};
 use ax_io::prelude::*;
 use axnet::{CMsgData, RecvFlags, RecvOptions, SendFlags, SendOptions, SocketAddrEx, SocketOps};
 use linux_raw_sys::net::{
-    MSG_PEEK, MSG_TRUNC, SCM_RIGHTS, SOL_SOCKET, cmsghdr, mmsghdr, msghdr, sockaddr, socklen_t,
+    MSG_PEEK, MSG_TRUNC, SCM_CREDENTIALS, SCM_RIGHTS, SOL_SOCKET, cmsghdr, mmsghdr, msghdr,
+    sockaddr, socklen_t, ucred,
 };
 
 use super::addr::SocketAddrExt;
@@ -112,6 +113,28 @@ fn recv_impl(
     }
 
     if let Some(mut builder) = cmsg_builder {
+        // Always inject credentials cmsg if there's room
+        let creds = CMsg::current_credentials();
+        if let CMsg::Credentials { pid, uid, gid } = &creds {
+            let pid = *pid;
+            let uid = *uid;
+            let gid = *gid;
+            builder.push(SOL_SOCKET, SCM_CREDENTIALS, |data| {
+                if data.len() < size_of::<ucred>() {
+                    return Ok(0);
+                }
+                let cred = ucred { pid, uid, gid };
+                let bytes = unsafe {
+                    core::slice::from_raw_parts(
+                        &cred as *const ucred as *const u8,
+                        size_of::<ucred>(),
+                    )
+                };
+                data[..size_of::<ucred>()].copy_from_slice(bytes);
+                Ok(size_of::<ucred>())
+            })?;
+        }
+
         for cmsg in cmsg {
             let Ok(cmsg) = cmsg.downcast::<CMsg>() else {
                 warn!("received unexpected cmsg");
@@ -128,6 +151,10 @@ fn recv_impl(
                     }
                     Ok(written)
                 })?,
+                CMsg::Credentials { .. } => {
+                    // Already injected above
+                    true
+                }
             };
             if !pushed {
                 break;

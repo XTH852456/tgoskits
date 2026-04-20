@@ -93,12 +93,26 @@ pub fn send_signal_to_process(pid: Pid, sig: Option<SignalInfo>) -> AxResult<()>
 
     if let Some(sig) = sig {
         let signo = sig.signo();
-        info!("Send signal {signo:?} to process {pid}");
-        if let Some(tid) = proc_data.signal.send_signal(sig)
-            && let Ok(task) = get_task(tid)
-        {
-            task.interrupt();
+        let target_tid = proc_data.signal.send_signal(sig);
+
+        // Wake signalfd waiters so epoll can re-evaluate pending signals.
+        // This must happen before task.interrupt() so that the epoll ready
+        // queue is populated before the task is woken.
+        proc_data.signal_event.wake();
+
+        // If no thread will handle the signal (all threads block it),
+        // we still need to wake one up so it can notice the pending signal
+        // via signalfd/epoll. But we use task.interrupt() which causes EINTR.
+        // Only interrupt if the signal is blocked — if a thread accepted it,
+        // it will handle it via the normal path.
+        if target_tid.is_none() {
+            // Signal blocked — find any live thread to wake.
+            let tid = proc_data.proc.threads().first().copied().unwrap_or(pid);
+            if let Ok(task) = get_task(tid) {
+                task.interrupt();
+            }
         }
+        info!("Send signal {signo:?} to process {pid}: target_tid={target_tid:?}");
     }
 
     Ok(())

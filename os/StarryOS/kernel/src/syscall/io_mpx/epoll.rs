@@ -84,7 +84,7 @@ fn do_epoll_wait(
     sigsetsize: usize,
 ) -> AxResult<isize> {
     check_sigset_size(sigsetsize)?;
-    debug!("sys_epoll_wait <= epfd: {epfd}, maxevents: {maxevents}, timeout: {timeout:?}");
+    warn!("sys_epoll_wait <= epfd: {epfd}, maxevents: {maxevents}, timeout: {timeout:?}");
 
     let epoll = Epoll::from_fd(epfd)?;
 
@@ -93,7 +93,7 @@ fn do_epoll_wait(
     }
     let events = events.get_as_mut_slice(maxevents as usize)?;
 
-    with_blocked_signals(
+    let result = with_blocked_signals(
         nullable!(sigmask.get_as_ref())?.copied(),
         || match block_on(future::timeout(
             timeout,
@@ -104,7 +104,9 @@ fn do_epoll_wait(
             Ok(r) => r.map(|n| n as _),
             Err(_) => Ok(0),
         },
-    )
+    );
+    warn!("sys_epoll_wait => {:?}", result);
+    result
 }
 
 pub fn sys_epoll_pwait(

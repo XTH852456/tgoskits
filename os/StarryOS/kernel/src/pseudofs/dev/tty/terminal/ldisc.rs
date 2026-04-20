@@ -145,7 +145,7 @@ impl<R: TtyRead, W: TtyWrite> InputReader<R, W> {
                 continue;
             }
 
-            if ch.is_ascii_graphic() {
+            if ch == b' ' || ch.is_ascii_graphic() {
                 self.line_buf.push(ch);
                 continue;
             }

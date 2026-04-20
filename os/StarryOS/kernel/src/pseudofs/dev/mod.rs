@@ -144,6 +144,7 @@ impl DeviceOps for CpuDmaLatency {
 
 fn builder(fs: Arc<SimpleFs>) -> DirMaker {
     let mut root = DirMapping::new();
+
     root.add(
         "null",
         Device::new(
@@ -153,6 +154,8 @@ fn builder(fs: Arc<SimpleFs>) -> DirMaker {
             Arc::new(Null),
         ),
     );
+    super::sys::register_device(1, 3, NodeType::CharacterDevice, "null");
+
     root.add(
         "zero",
         Device::new(
@@ -162,6 +165,8 @@ fn builder(fs: Arc<SimpleFs>) -> DirMaker {
             Arc::new(Zero),
         ),
     );
+    super::sys::register_device(1, 5, NodeType::CharacterDevice, "zero");
+
     root.add(
         "full",
         Device::new(
@@ -171,6 +176,8 @@ fn builder(fs: Arc<SimpleFs>) -> DirMaker {
             Arc::new(Full),
         ),
     );
+    super::sys::register_device(1, 7, NodeType::CharacterDevice, "full");
+
     root.add(
         "random",
         Device::new(
@@ -180,6 +187,8 @@ fn builder(fs: Arc<SimpleFs>) -> DirMaker {
             Arc::new(Random::new()),
         ),
     );
+    super::sys::register_device(1, 8, NodeType::CharacterDevice, "random");
+
     root.add(
         "urandom",
         Device::new(
@@ -189,6 +198,8 @@ fn builder(fs: Arc<SimpleFs>) -> DirMaker {
             Arc::new(Random::new()),
         ),
     );
+    super::sys::register_device(1, 9, NodeType::CharacterDevice, "urandom");
+
     root.add(
         "rtc0",
         Device::new(
@@ -198,6 +209,13 @@ fn builder(fs: Arc<SimpleFs>) -> DirMaker {
             Arc::new(rtc::Rtc),
         ),
     );
+    super::sys::register_device(
+        rtc::RTC0_DEVICE_ID.major(),
+        rtc::RTC0_DEVICE_ID.minor(),
+        NodeType::CharacterDevice,
+        "rtc0",
+    );
+
     if ax_display::has_display() {
         root.add(
             "fb0",
@@ -208,6 +226,7 @@ fn builder(fs: Arc<SimpleFs>) -> DirMaker {
                 Arc::new(fb::FrameBuffer::new()),
             ),
         );
+        super::sys::register_device(29, 0, NodeType::CharacterDevice, "fb0");
     }
 
     root.add(
@@ -219,6 +238,8 @@ fn builder(fs: Arc<SimpleFs>) -> DirMaker {
             Arc::new(tty::CurrentTty),
         ),
     );
+    super::sys::register_device(5, 0, NodeType::CharacterDevice, "tty");
+
     root.add(
         "console",
         Device::new(
@@ -228,6 +249,7 @@ fn builder(fs: Arc<SimpleFs>) -> DirMaker {
             tty::N_TTY.clone(),
         ),
     );
+    super::sys::register_device(5, 1, NodeType::CharacterDevice, "console");
 
     root.add(
         "ptmx",
@@ -238,6 +260,8 @@ fn builder(fs: Arc<SimpleFs>) -> DirMaker {
             Arc::new(tty::Ptmx(fs.clone())),
         ),
     );
+    super::sys::register_device(5, 2, NodeType::CharacterDevice, "ptmx");
+
     root.add(
         "pts",
         SimpleDir::new_maker(fs.clone(), Arc::new(tty::PtsDir)),
@@ -258,6 +282,8 @@ fn builder(fs: Arc<SimpleFs>) -> DirMaker {
             Arc::new(memtrack::MemTrack),
         ),
     );
+    #[cfg(feature = "memtrack")]
+    super::sys::register_device(114, 514, NodeType::CharacterDevice, "memtrack");
 
     root.add(
         "cpu_dma_latency",
@@ -268,6 +294,7 @@ fn builder(fs: Arc<SimpleFs>) -> DirMaker {
             Arc::new(CpuDmaLatency),
         ),
     );
+    super::sys::register_device(10, 1024, NodeType::CharacterDevice, "cpu_dma_latency");
 
     // This is mounted to a tmpfs in `new_procfs`
     root.add(
@@ -277,7 +304,7 @@ fn builder(fs: Arc<SimpleFs>) -> DirMaker {
 
     // Loop devices
     for i in 0..16 {
-        let dev_id = DeviceId::new(7, 0);
+        let dev_id = DeviceId::new(7, i);
         root.add(
             format!("loop{i}"),
             Device::new(
@@ -287,6 +314,7 @@ fn builder(fs: Arc<SimpleFs>) -> DirMaker {
                 Arc::new(r#loop::LoopDevice::new(i, dev_id)),
             ),
         );
+        super::sys::register_device(7, i, NodeType::BlockDevice, &format!("loop{i}"));
     }
 
     // Input devices

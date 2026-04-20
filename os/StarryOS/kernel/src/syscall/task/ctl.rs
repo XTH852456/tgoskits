@@ -113,6 +113,13 @@ pub fn sys_prctl(
             // not implemented; but avoid annoying warnings
             return Err(AxError::InvalidInput);
         }
+        // Capability-related prctls: silently ignore since we don't implement
+        // Linux capabilities. Returning success prevents systemd from failing
+        // service spawning with "Failed to set process secure bits".
+        PR_SET_SECUREBITS | PR_GET_SECUREBITS | PR_SET_KEEPCAPS | PR_GET_KEEPCAPS => {}
+        PR_CAPBSET_READ | PR_CAPBSET_DROP => {}
+        PR_SET_NO_NEW_PRIVS | PR_GET_NO_NEW_PRIVS => {}
+        PR_SET_PDEATHSIG | PR_GET_PDEATHSIG => {}
         _ => {
             debug!("sys_prctl: unsupported option {option}");
             return Err(AxError::InvalidInput);

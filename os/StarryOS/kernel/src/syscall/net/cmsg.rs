@@ -1,15 +1,18 @@
 use alloc::{sync::Arc, vec::Vec};
 
 use ax_errno::{AxError, AxResult};
-use linux_raw_sys::net::{SCM_RIGHTS, SOL_SOCKET, cmsghdr};
+use ax_task::current;
+use linux_raw_sys::net::{SCM_CREDENTIALS, SCM_RIGHTS, SOL_SOCKET, cmsghdr, ucred};
 
 use crate::{
     file::{FileLike, get_file_like},
     mm::{UserConstPtr, UserPtr},
+    task::AsThread,
 };
 
 pub enum CMsg {
     Rights { fds: Vec<Arc<dyn FileLike>> },
+    Credentials { pid: u32, uid: u32, gid: u32 },
 }
 impl CMsg {
     pub fn parse(hdr: &cmsghdr) -> AxResult<Self> {
@@ -36,10 +39,25 @@ impl CMsg {
                 }
                 Self::Rights { fds }
             }
+            (SOL_SOCKET, SCM_CREDENTIALS) => {
+                if data.len() < size_of::<ucred>() {
+                    return Err(AxError::InvalidInput);
+                }
+                // Accept the credentials from userspace but ignore them —
+                // we'll use the kernel-known credentials on the recv side.
+                Self::Credentials { pid: 0, uid: 0, gid: 0 }
+            }
             _ => {
                 return Err(AxError::InvalidInput);
             }
         })
+    }
+
+    /// Create a credentials cmsg from the current task.
+    pub fn current_credentials() -> Self {
+        let curr = current();
+        let pid = curr.as_thread().proc_data.proc.pid();
+        Self::Credentials { pid, uid: 0, gid: 0 }
     }
 }
 

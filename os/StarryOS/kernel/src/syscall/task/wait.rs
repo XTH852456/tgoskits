@@ -8,11 +8,19 @@ use ax_task::{
 };
 use bitflags::bitflags;
 use linux_raw_sys::general::{
-    __WALL, __WCLONE, __WNOTHREAD, WCONTINUED, WEXITED, WNOHANG, WNOWAIT, WUNTRACED,
+    CLD_EXITED, P_ALL, P_PGID, P_PID, SIGCHLD, WCONTINUED, WEXITED, WNOHANG, WNOWAIT, WUNTRACED,
+    __WALL, __WCLONE, __WNOTHREAD,
+    __sifields__bindgen_ty_4, siginfo, siginfo__bindgen_ty_1, siginfo__bindgen_ty_1__bindgen_ty_1,
+    __sifields,
 };
+
+/// Linux `P_PIDFD` idtype for `waitid()` (since Linux 5.4).
+/// Not exported by `linux_raw_sys`, defined manually.
+const P_PIDFD: u32 = 3;
 use starry_process::{Pid, Process};
 use starry_vm::{VmMutPtr, VmPtr};
 
+use crate::file::{FileLike, PidFd};
 use crate::task::AsThread;
 
 bitflags! {
@@ -114,5 +122,111 @@ pub fn sys_waitpid(pid: i32, exit_code: *mut i32, options: u32) -> AxResult<isiz
             }
         }
     })))?;
+    result
+}
+
+/// `waitid(idtype, id, infop, options)` — wait for a child process to change state.
+pub fn sys_waitid(
+    idtype: u32,
+    id: i32,
+    infop: *mut siginfo,
+    options: u32,
+) -> AxResult<isize> {
+    warn!("sys_waitid <= idtype: {idtype}, id: {id}, options: {options}");
+    let wait_opts = WaitOptions::from_bits_truncate(options);
+
+    let curr = current();
+    let proc_data = &curr.as_thread().proc_data;
+    let proc = &proc_data.proc;
+
+    // Determine which child to wait for based on idtype
+    let wait_pid = match idtype {
+        P_ALL => WaitPid::Any,
+        P_PID => WaitPid::Pid(id as Pid),
+        P_PGID => {
+            if id == 0 {
+                WaitPid::Pgid(proc.group().pgid())
+            } else {
+                WaitPid::Pgid(id as Pid)
+            }
+        }
+        P_PIDFD => {
+            // `id` is a file descriptor referring to a pidfd.
+            let pidfd = PidFd::from_fd(id)?;
+            let pid = pidfd.process_data()?.proc.pid();
+            WaitPid::Pid(pid)
+        }
+        _ => return Err(AxError::InvalidInput),
+    };
+
+    let children: Vec<_> = proc
+        .children()
+        .into_iter()
+        .filter(|child| wait_pid.apply(child))
+        .collect();
+
+    if children.is_empty() {
+        return Err(AxError::from(LinuxError::ECHILD));
+    }
+
+    let check_children = || -> AxResult<Option<isize>> {
+        if let Some(child) = children.iter().find(|child| child.is_zombie()) {
+            if !wait_opts.contains(WaitOptions::WNOWAIT) {
+                child.free();
+            }
+            // Write siginfo if infop is non-null
+            if let Some(infop) = infop.nullable() {
+                let si = siginfo {
+                    __bindgen_anon_1: siginfo__bindgen_ty_1 {
+                        __bindgen_anon_1: siginfo__bindgen_ty_1__bindgen_ty_1 {
+                            si_signo: SIGCHLD as _,
+                            si_errno: 0,
+                            si_code: CLD_EXITED as _,
+                            _sifields: __sifields {
+                                _sigchld: __sifields__bindgen_ty_4 {
+                                    _pid: child.pid() as _,
+                                    _uid: 0,
+                                    _status: child.exit_code() >> 8,
+                                    _utime: 0,
+                                    _stime: 0,
+                                },
+                            },
+                        },
+                    },
+                };
+                infop.vm_write(si)?;
+            }
+            Ok(Some(child.pid() as _))
+        } else if wait_opts.contains(WaitOptions::WNOHANG) {
+            // WNOHANG: write zeroed siginfo and return 0
+            if let Some(infop) = infop.nullable() {
+                let si = siginfo {
+                    __bindgen_anon_1: siginfo__bindgen_ty_1 {
+                        __bindgen_anon_1: siginfo__bindgen_ty_1__bindgen_ty_1 {
+                            si_signo: 0,
+                            si_errno: 0,
+                            si_code: 0,
+                            _sifields: unsafe { core::mem::zeroed() },
+                        },
+                    },
+                };
+                infop.vm_write(si)?;
+            }
+            Ok(Some(0))
+        } else {
+            Ok(None)
+        }
+    };
+
+    let result = block_on(interruptible(poll_fn(|cx| {
+        match check_children().transpose() {
+            Some(res) => Poll::Ready(res),
+            None => {
+                proc_data.child_exit_event.register(cx.waker());
+                Poll::Pending
+            }
+        }
+    })))?;
+    warn!("sys_waitid => result={:?}", result);
     result
 }

@@ -1,11 +1,13 @@
 //! Basic virtual filesystem support
 
+pub mod cgroup;
 pub mod dev;
 mod device;
 mod dir;
 mod file;
 mod fs;
 mod proc;
+pub mod sys;
 mod tmp;
 
 use alloc::sync::Arc;
@@ -67,16 +69,7 @@ pub fn mount_all() -> LinuxResult<()> {
     mount_at(&fs, "/tmp", tmp::MemoryFs::new())?;
     mount_at(&fs, "/proc", proc::new_procfs())?;
 
-    mount_at(&fs, "/sys", tmp::MemoryFs::new())?;
-    let mut path = PathBuf::new();
-    for comp in Path::new("/sys/class/graphics/fb0/device").components() {
-        path.push(comp.as_str());
-        if fs.resolve(&path).is_err() {
-            fs.create_dir(&path, DIR_PERMISSION)?;
-        }
-    }
-    path.push("subsystem");
-    fs.symlink("whatever", &path)?;
+    mount_at(&fs, "/sys", sys::new_sysfs())?;
     drop(fs);
 
     #[cfg(feature = "dev-log")]

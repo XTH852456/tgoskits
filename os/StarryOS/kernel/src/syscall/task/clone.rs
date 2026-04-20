@@ -125,7 +125,7 @@ impl CloneArgs {
             | CloneFlags::NEWCGROUP;
 
         if flags.intersects(namespace_flags) {
-            warn!("sys_clone/sys_clone3: namespace flags detected, stub support only");
+            warn!("sys_clone/sys_clone3: namespace flags {flags:?} detected, stripping");
         }
 
         Ok(())
@@ -145,11 +145,23 @@ impl CloneArgs {
         } = self;
 
         if flags.contains(CloneFlags::VFORK) {
-            debug!("do_clone: CLONE_VFORK slow path");
+            warn!("do_clone: CLONE_VFORK detected");
             flags.remove(CloneFlags::VM);
         }
 
-        debug!(
+        // Strip namespace flags — we don't support namespaces
+        let namespace_flags = CloneFlags::NEWNS
+            | CloneFlags::NEWIPC
+            | CloneFlags::NEWNET
+            | CloneFlags::NEWPID
+            | CloneFlags::NEWUSER
+            | CloneFlags::NEWUTS
+            | CloneFlags::NEWCGROUP;
+        if flags.intersects(namespace_flags) {
+            flags.remove(namespace_flags);
+        }
+
+        warn!(
             "do_clone <= flags: {:?}, exit_signal: {}, stack: {:#x}, tls: {:#x}",
             flags, exit_signal, stack, tls
         );
@@ -168,6 +180,9 @@ impl CloneArgs {
             new_uctx.set_tls(tls);
         }
         new_uctx.set_retval(0);
+
+        warn!("do_clone: child sp={:#x}, tls={:#x}, x0={:#x}",
+            new_uctx.sp(), new_uctx.tls(), new_uctx.retval());
 
         let set_child_tid = if flags.contains(CloneFlags::CHILD_SETTID) {
             child_tid
@@ -276,6 +291,7 @@ impl CloneArgs {
         let task = spawn_task(new_task);
         add_task_to_table(&task);
 
+        warn!("do_clone: child tid={tid}");
         Ok(tid as _)
     }
 }
@@ -289,6 +305,7 @@ pub fn sys_clone(
     tls: usize,
     #[cfg(not(any(target_arch = "x86_64", target_arch = "loongarch64")))] child_tid: usize,
 ) -> AxResult<isize> {
+    warn!("sys_clone (not clone3) <= flags: {flags:#x}, stack: {stack:#x}, tls: {tls:#x}");
     const FLAG_MASK: u32 = 0xff;
     let clone_flags = CloneFlags::from_bits_truncate((flags & !FLAG_MASK) as u64);
     let exit_signal = (flags & FLAG_MASK) as u64;

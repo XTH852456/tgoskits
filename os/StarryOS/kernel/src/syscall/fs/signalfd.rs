@@ -1,4 +1,5 @@
 use ax_errno::{AxError, AxResult};
+use ax_task::current;
 use bitflags::bitflags;
 use linux_raw_sys::general::{O_CLOEXEC, O_NONBLOCK};
 use starry_signal::SignalSet;
@@ -7,6 +8,7 @@ use starry_vm::VmPtr;
 use crate::{
     file::{FileLike, add_file_like, signalfd::Signalfd},
     syscall::signal::check_sigset_size,
+    task::AsThread,
 };
 
 // SFD flag definitions (if not available in linux_raw_sys)
@@ -63,7 +65,8 @@ pub fn sys_signalfd4(
     }
 
     // Create a new Signalfd
-    let signalfd = Signalfd::new(mask);
+    let proc_data = current().as_thread().proc_data.clone();
+    let signalfd = Signalfd::new(&proc_data, mask);
     signalfd.set_nonblocking(flags.contains(SignalfdFlags::NONBLOCK))?;
 
     // Add to file descriptor table
