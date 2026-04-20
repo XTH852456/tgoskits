@@ -216,6 +216,10 @@ impl WaitQueue {
 }
 
 fn unblock_one_task(task: AxTaskRef, resched: bool) {
+    #[cfg(feature = "irq")]
+    // Invalidate any outstanding timeout as soon as a waiter is selected for
+    // notification, so a stale timer callback cannot race with this wakeup.
+    task.timer_ticket_expired();
     // Mark task as not in wait queue.
     task.set_in_wait_queue(false);
     // Select run queue by the CPU set of the task.
