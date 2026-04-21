@@ -74,18 +74,23 @@ impl ProcessSignalManager {
         if guard.set.is_empty() {
             self.possibly_has_signal.store(false, Ordering::Release);
         }
+        if result.is_some() {
+        }
         result
     }
 
     /// Checks if a signal is ignored by the process.
+    ///
+    /// Only returns true for explicitly set SIG_IGN. Signals with SIG_DFL whose
+    /// default action is "ignore" are NOT treated as ignored here, because they
+    /// must still be queued to the pending set so that signalfd can read them.
+    /// The default-ignore action is applied at delivery time (in check_signals),
+    /// not at send time.
     pub fn signal_ignored(&self, signo: Signo) -> bool {
-        match &self.actions.lock()[signo].disposition {
-            SignalDisposition::Ignore => true,
-            SignalDisposition::Default => {
-                matches!(signo.default_action(), DefaultSignalAction::Ignore)
-            }
-            _ => false,
-        }
+        matches!(
+            &self.actions.lock()[signo].disposition,
+            SignalDisposition::Ignore
+        )
     }
 
     /// Checks if syscalls interrupted by the given signal can be restarted.

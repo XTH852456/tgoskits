@@ -166,6 +166,15 @@ impl<R: TtyRead, W: TtyWrite> DeviceOps for Tty<R, W> {
                     warn!("Failed to unset terminal");
                 }
             }
+            TIOCMGET => {
+                // Report carrier detect, clear to send, and data set ready
+                // so serial port tools (agetty) don't wait for carrier.
+                const TIOCM_CAR: u32 = 0x40;
+                const TIOCM_CTS: u32 = 0x20;
+                const TIOCM_DSR: u32 = 0x100;
+                (arg as *mut u32).vm_write(TIOCM_CAR | TIOCM_CTS | TIOCM_DSR)?;
+            }
+            TIOCSBRK | TIOCCBRK | TIOCMBIS | TIOCMBIC | TIOCMSET => {}
             _ => return Err(AxError::NotATty),
         }
         Ok(0)

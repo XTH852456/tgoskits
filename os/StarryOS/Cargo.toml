@@ -37,3 +37,6 @@ ax-sync = { version = "0.5.0" }
 ax-task = { version = "0.5.0" }
 
 starry-kernel = { path = "kernel", version = "0.4.0" }
+
+[patch.crates-io]
+starry-signal = { path = "../../components/starry-signal" }

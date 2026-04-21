@@ -405,6 +405,10 @@ impl Epoll {
                     count += 1;
                     // Don't push back immediately — collect for later.
                     requeue.push_back(Arc::downgrade(&interest));
+                    // Re-register waker so future events (e.g., new signals
+                    // on signalfd) can still wake this interest. The previous
+                    // PollSet::wake() consumed the old waker registration.
+                    self.register_waker_only(&interest);
                 }
                 ConsumeResult::EventAndRemove(event) => {
                     out[count] = epoll_event {

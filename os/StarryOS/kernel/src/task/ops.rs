@@ -221,7 +221,15 @@ pub fn do_exit(exit_code: i32, group_exit: bool) {
     }
 
     let process = &thr.proc_data.proc;
-    if process.exit_thread(curr.id().as_u64() as Pid, exit_code) {
+    let is_last = process.exit_thread(curr.id().as_u64() as Pid, exit_code);
+    warn!(
+        "do_exit: pid={}, is_last={}, exit_signal={:?}, parent={:?}",
+        process.pid(),
+        is_last,
+        thr.proc_data.exit_signal,
+        process.parent().map(|p| p.pid()),
+    );
+    if is_last {
         // Close all file descriptors before marking the process as exited.
         // This is critical: if we don't close FDs here, pipe write ends remain
         // open and parent processes will hang forever reading from the pipe.

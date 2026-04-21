@@ -643,9 +643,6 @@ pub fn handle_syscall(uctx: &mut UserContext) {
         | Sysno::perf_event_open
         | Sysno::io_uring_setup
         | Sysno::bpf
-        | Sysno::fsopen
-        | Sysno::fspick
-        | Sysno::open_tree
         | Sysno::memfd_secret => sys_dummy_fd(sysno),
 
         Sysno::timerfd_create => crate::file::timerfd::sys_timerfd_create(uctx.arg0() as _, uctx.arg1() as _),
@@ -674,9 +671,13 @@ pub fn handle_syscall(uctx: &mut UserContext) {
         // syscalls that need ENOSYS for userspace to fall back gracefully
         Sysno::name_to_handle_at
         | Sysno::settimeofday
+        | Sysno::fsopen
         | Sysno::fsconfig
         | Sysno::fsmount
-        | Sysno::fspick => Err(AxError::Unsupported),
+        | Sysno::fspick
+        | Sysno::open_tree
+        | Sysno::move_mount
+        | Sysno::mount_setattr => Err(AxError::Unsupported),
 
         // Known benign unimplemented syscalls (glibc handles ENOSYS gracefully)
         Sysno::rseq => {

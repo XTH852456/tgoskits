@@ -262,25 +262,33 @@ RCS
                 # Set default target to multi-user
                 chroot \$ROOTFS systemctl set-default multi-user.target
 
-                # Add getty on ttyS0 for serial console
-                chroot \$ROOTFS systemctl enable serial-getty@ttyS0.service
-
-                # Create a minimal getty on the console
+                # Console getty: use bash directly (agetty enters serial baud rate
+                # detection on ttyAMA0 and times out; -L flag doesn't prevent it).
                 cat > \$ROOTFS/etc/systemd/system/console-getty.service <<'GETTY'
 [Unit]
-Description=Console Getty
+Description=Console Shell on Starry OS
 After=systemd-user-sessions.service
 
 [Service]
 Type=simple
-ExecStart=-/sbin/agetty --noclear - 115200 linux
+ExecStart=-/bin/bash --login
 Restart=always
 RestartSec=0
+KillMode=process
+
+StandardInput=tty
+StandardOutput=tty
+StandardError=tty
+TTYPath=/dev/console
 
 [Install]
 WantedBy=getty.target
 GETTY
                 chroot \$ROOTFS systemctl enable console-getty.service
+
+                # Mask serial-getty@ttyAMA0 to prevent systemd auto-detection from
+                # spawning agetty with serial baud rate detection
+                ln -sf /dev/null \$ROOTFS/etc/systemd/system/serial-getty@ttyAMA0.service
             fi
 
             # --- APT config for Starry OS ---

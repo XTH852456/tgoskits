@@ -260,6 +260,7 @@ impl SimpleDirOps for ThreadDir {
                 "task",
                 "maps",
                 "mounts",
+                "mountinfo",
                 "cmdline",
                 "comm",
                 "exe",
@@ -323,6 +324,17 @@ impl SimpleDirOps for ThreadDir {
             .into(),
             "mounts" => SimpleFile::new_regular(fs, move || {
                 Ok("proc /proc proc rw,nosuid,nodev,noexec,relatime 0 0\n")
+            })
+            .into(),
+            "mountinfo" => SimpleFile::new_regular(fs, move || {
+                // Linux mountinfo format:
+                // mount_id parent_id major:minor root mount_point mount_options - fs_type mount_source super_options
+                Ok(String::from(
+                    "1 0 254:0 / / rw,relatime - ext4 /dev/vda rw\n\
+                     2 1 0:3 / /proc rw,nosuid,nodev,noexec,relatime - proc proc rw\n\
+                     3 1 0:6 / /sys rw,nosuid,nodev,noexec,relatime - sysfs sysfs rw\n\
+                     4 1 0:5 / /dev rw,nosuid,relatime - devtmpfs devtmpfs rw\n",
+                ))
             })
             .into(),
             "cmdline" => SimpleFile::new_regular(fs, move || {
@@ -551,6 +563,17 @@ fn builder(fs: Arc<SimpleFs>) -> DirMaker {
         "mounts",
         SimpleFile::new_regular(fs.clone(), || {
             Ok("proc /proc proc rw,nosuid,nodev,noexec,relatime 0 0\n")
+        }),
+    );
+    root.add(
+        "mountinfo",
+        SimpleFile::new_regular(fs.clone(), || {
+            Ok(String::from(
+                "1 0 254:0 / / rw,relatime - ext4 /dev/vda rw\n\
+                 2 1 0:3 / /proc rw,nosuid,nodev,noexec,relatime - proc proc rw\n\
+                 3 1 0:6 / /sys rw,nosuid,nodev,noexec,relatime - sysfs sysfs rw\n\
+                 4 1 0:5 / /dev rw,nosuid,relatime - devtmpfs devtmpfs rw\n",
+            ))
         }),
     );
     root.add(
