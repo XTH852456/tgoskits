@@ -173,6 +173,8 @@ impl WaitQueue {
     pub fn notify_one(&self, resched: bool) -> bool {
         let mut wq = self.queue.lock();
         if let Some(task) = wq.pop_front() {
+            #[cfg(feature = "irq")]
+            task.timer_ticket_expired();
             unblock_one_task(task, resched);
             true
         } else {
@@ -196,6 +198,8 @@ impl WaitQueue {
     {
         let mut wq = self.queue.lock();
         if let Some(task) = wq.pop_front() {
+            #[cfg(feature = "irq")]
+            task.timer_ticket_expired();
             func(task.id().as_u64());
             unblock_one_task(task, resched);
             true
@@ -216,10 +220,6 @@ impl WaitQueue {
 }
 
 fn unblock_one_task(task: AxTaskRef, resched: bool) {
-    #[cfg(feature = "irq")]
-    // Invalidate any outstanding timeout as soon as a waiter is selected for
-    // notification, so a stale timer callback cannot race with this wakeup.
-    task.timer_ticket_expired();
     // Mark task as not in wait queue.
     task.set_in_wait_queue(false);
     // Select run queue by the CPU set of the task.

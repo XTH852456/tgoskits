@@ -20,8 +20,9 @@ pub(crate) const ARCEOS_TEST_PACKAGES: &[&str] = &[
     "arceos-net-udpserver",
     "arceos-wait-queue",
     "arceos-yield",
-    "arceos-stress",
 ];
+
+pub(crate) const ARCEOS_STRESS_PACKAGES: &[&str] = &["arceos-concurrency"];
 
 const ARCEOS_TEST_TARGETS: &[&str] = &[
     "x86_64-unknown-none",

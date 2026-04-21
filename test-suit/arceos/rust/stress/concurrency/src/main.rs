@@ -17,7 +17,7 @@ use std::{
         atomic::{AtomicBool, AtomicUsize, Ordering},
     },
     thread,
-    time::Duration,
+    time::{Duration, Instant},
     vec::Vec,
 };
 
@@ -30,7 +30,17 @@ const ROUND_TIMEOUT_MS: u64 = 2500;
 #[cfg(feature = "ax-std")]
 const WATCHDOG_SLEEP_MS: u64 = 50;
 #[cfg(feature = "ax-std")]
-const WATCHDOG_STALL_TICKS: usize = 40;
+const WATCHDOG_STALL_TICKS: usize = 60;
+#[cfg(feature = "ax-std")]
+const STAGE_ARMED_READY: usize = 1;
+#[cfg(feature = "ax-std")]
+const STAGE_START_RELEASED: usize = 2;
+#[cfg(feature = "ax-std")]
+const STAGE_MIDWAY_READY: usize = 3;
+#[cfg(feature = "ax-std")]
+const STAGE_RELEASED: usize = 4;
+#[cfg(feature = "ax-std")]
+const STAGE_FINISHED: usize = 5;
 
 #[cfg(feature = "ax-std")]
 struct Shared {
@@ -45,7 +55,9 @@ struct StressContext {
     armed_workers: AtomicUsize,
     midway_workers: AtomicUsize,
     finished_workers: AtomicUsize,
-    progress: AtomicUsize,
+    stage_seq: AtomicUsize,
+    stage_round: AtomicUsize,
+    stage_kind: AtomicUsize,
     stop_watchdog: AtomicBool,
     start_wq: WaitQueue,
     release_wq: WaitQueue,
@@ -63,7 +75,9 @@ impl StressContext {
             armed_workers: AtomicUsize::new(0),
             midway_workers: AtomicUsize::new(0),
             finished_workers: AtomicUsize::new(0),
-            progress: AtomicUsize::new(0),
+            stage_seq: AtomicUsize::new(0),
+            stage_round: AtomicUsize::new(0),
+            stage_kind: AtomicUsize::new(0),
             stop_watchdog: AtomicBool::new(false),
             start_wq: WaitQueue::new(),
             release_wq: WaitQueue::new(),
@@ -76,8 +90,10 @@ impl StressContext {
         }
     }
 
-    fn bump_progress(&self) {
-        self.progress.fetch_add(1, Ordering::Relaxed);
+    fn record_stage(&self, round: usize, stage_kind: usize) {
+        self.stage_round.store(round, Ordering::Release);
+        self.stage_kind.store(stage_kind, Ordering::Release);
+        self.stage_seq.fetch_add(1, Ordering::AcqRel);
     }
 }
 
@@ -127,6 +143,21 @@ fn sleep_or_yield(delay: Duration) {
 }
 
 #[cfg(feature = "ax-std")]
+fn post_notify_disturb(round: usize, phase: usize) {
+    let mix = round + phase;
+    if mix.is_multiple_of(2) {
+        thread::yield_now();
+    }
+    if mix.is_multiple_of(3) {
+        thread::sleep(Duration::ZERO);
+    }
+    spin_for(160 + (mix % 3) * 128);
+    if mix.is_multiple_of(5) {
+        thread::sleep(Duration::from_millis(1));
+    }
+}
+
+#[cfg(feature = "ax-std")]
 fn wait_for_counter(
     round: usize,
     worker_count: usize,
@@ -149,7 +180,7 @@ fn wait_for_counter(
 fn signal_progress(ctx: &StressContext, counter: &AtomicUsize, wq: &WaitQueue) {
     counter.fetch_add(1, Ordering::Release);
     wq.notify_one(true);
-    ctx.bump_progress();
+    let _ = ctx;
 }
 
 #[cfg(feature = "ax-std")]
@@ -164,10 +195,7 @@ fn wait_for_round(
         let _timed_out = wq.wait_timeout_until(Duration::from_millis(timeout_ms), || {
             gate.load(Ordering::Acquire) > round
         });
-        if gate.load(Ordering::Acquire) <= round {
-            thread::yield_now();
-            ctx.bump_progress();
-        }
+        let _ = ctx;
     }
 }
 
@@ -236,26 +264,28 @@ fn run_second_sections(
 #[cfg(feature = "ax-std")]
 fn spawn_watchdog(ctx: Arc<StressContext>) -> thread::JoinHandle<()> {
     thread::spawn(move || {
-        let mut last_progress = ctx.progress.load(Ordering::Acquire);
-        let mut stall_ticks = 0usize;
+        let mut last_stage_seq = ctx.stage_seq.load(Ordering::Acquire);
+        let mut last_stage_change = Instant::now();
         while !ctx.stop_watchdog.load(Ordering::Acquire) {
             thread::sleep(Duration::from_millis(WATCHDOG_SLEEP_MS));
-            let progress = ctx.progress.load(Ordering::Acquire);
-            if progress == last_progress {
-                stall_ticks += 1;
+            let stage_seq = ctx.stage_seq.load(Ordering::Acquire);
+            if stage_seq != last_stage_seq {
+                last_stage_seq = stage_seq;
+                last_stage_change = Instant::now();
+            } else {
                 assert!(
-                    stall_ticks < WATCHDOG_STALL_TICKS,
-                    "watchdog detected no progress: start_round={}, release_round={}, armed={}, \
-                     midway={}, finished={}",
+                    last_stage_change.elapsed()
+                        < Duration::from_millis(WATCHDOG_SLEEP_MS * WATCHDOG_STALL_TICKS as u64),
+                    "watchdog detected stalled stage: stage_round={}, stage_kind={}, \
+                     start_round={}, release_round={}, armed={}, midway={}, finished={}",
+                    ctx.stage_round.load(Ordering::Relaxed),
+                    ctx.stage_kind.load(Ordering::Relaxed),
                     ctx.start_round.load(Ordering::Relaxed),
                     ctx.release_round.load(Ordering::Relaxed),
                     ctx.armed_workers.load(Ordering::Relaxed),
                     ctx.midway_workers.load(Ordering::Relaxed),
                     ctx.finished_workers.load(Ordering::Relaxed),
                 );
-            } else {
-                last_progress = progress;
-                stall_ticks = 0;
             }
         }
     })
@@ -307,13 +337,13 @@ fn spawn_workers(
 fn run_stress() {
     let cpu_num = thread::available_parallelism().unwrap().get();
     if cpu_num <= 1 {
-        println!("skip concurrency stress: single CPU");
+        println!("skip concurrency: single CPU");
         return;
     }
 
     let worker_count = cpu_num * 4;
-    let rounds = 64;
-    println!("concurrency_stress: cpu_num={cpu_num}, worker_count={worker_count}, rounds={rounds}");
+    let rounds = 300;
+    println!("concurrency: cpu_num={cpu_num}, worker_count={worker_count}, rounds={rounds}");
 
     let ctx = Arc::new(StressContext::new());
     let watchdog = spawn_watchdog(Arc::clone(&ctx));
@@ -321,6 +351,7 @@ fn run_stress() {
 
     for round in 0..rounds {
         wait_for_counter(round, worker_count, &ctx.armed_workers, &ctx.arm_wq, "arm");
+        ctx.record_stage(round, STAGE_ARMED_READY);
         sleep_or_yield(match round % 4 {
             0 => Duration::ZERO,
             1 => Duration::from_millis(START_TIMEOUT_MS / 4),
@@ -329,7 +360,8 @@ fn run_stress() {
         });
         ctx.start_round.store(round + 1, Ordering::Release);
         ctx.start_wq.notify_all(true);
-        ctx.bump_progress();
+        post_notify_disturb(round, 0);
+        ctx.record_stage(round, STAGE_START_RELEASED);
 
         wait_for_counter(
             round,
@@ -338,6 +370,7 @@ fn run_stress() {
             &ctx.arm_wq,
             "reach midway",
         );
+        ctx.record_stage(round, STAGE_MIDWAY_READY);
         sleep_or_yield(match round % 5 {
             0 => Duration::ZERO,
             1 => Duration::from_millis(RELEASE_TIMEOUT_MS / 3),
@@ -347,7 +380,8 @@ fn run_stress() {
         });
         ctx.release_round.store(round + 1, Ordering::Release);
         ctx.release_wq.notify_all(true);
-        ctx.bump_progress();
+        post_notify_disturb(round, 1);
+        ctx.record_stage(round, STAGE_RELEASED);
 
         wait_for_counter(
             round,
@@ -356,6 +390,7 @@ fn run_stress() {
             &ctx.finished_wq,
             "finish",
         );
+        ctx.record_stage(round, STAGE_FINISHED);
         let shared = ctx.shared.lock();
         let expected_min = worker_count * (round + 1) * 5;
         assert!(
@@ -395,7 +430,7 @@ fn run_stress() {
         expected_round_hits_min,
     );
     println!(
-        "concurrency_stress: round_hits={}, critical_sum={}, total_score={}",
+        "concurrency: round_hits={}, critical_sum={}, total_score={}",
         shared.round_hits, shared.critical_sum, total_score
     );
 }
@@ -404,7 +439,7 @@ fn run_stress() {
 fn main() {
     #[cfg(feature = "ax-std")]
     {
-        println!("Hello, concurrency stress test!");
+        println!("Hello, concurrency test!");
         run_stress();
     }
 
