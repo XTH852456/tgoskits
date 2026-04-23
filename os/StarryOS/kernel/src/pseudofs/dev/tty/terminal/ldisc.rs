@@ -213,7 +213,7 @@ pub struct LineDiscipline<R, W> {
     processor: Processor<R, W>,
 }
 
-struct WaitPollable<'a>(Option<&'a Arc<PollSet>>);
+struct WaitPollable<'a>(Option<&'a PollSet>);
 impl Pollable for WaitPollable<'_> {
     fn poll(&self) -> IoEvents {
         unreachable!()
@@ -318,19 +318,19 @@ impl<R: TtyRead, W: TtyWrite> LineDiscipline<R, W> {
             ProcessMode::InterruptDriven(input_source) => {
                 Self::spawn_interrupt_driven_reader(
                     reader,
-                    input_source.clone(),
+                    input_source,
                     input_ready.clone(),
                     pump_retry.clone(),
                 );
                 Processor::InterruptDriven
             }
             ProcessMode::Passive(poll_rx) => {
-                // Destruct the reader here
+                let InputReader { reader, buf_tx, .. } = reader;
                 Processor::Passive(
                     SimpleReader {
-                        reader: reader.reader,
+                        reader,
                         read_buf: [0; BUF_SIZE],
-                        buf_tx: reader.buf_tx,
+                        buf_tx,
                     },
                     poll_rx,
                 )
@@ -400,7 +400,7 @@ impl<R: TtyRead, W: TtyWrite> LineDiscipline<R, W> {
             term.special_char(VMIN) as usize
         };
 
-        if buf.len() < vmin as usize {
+        if buf.len() < vmin {
             return Err(AxError::WouldBlock);
         }
 
@@ -419,7 +419,7 @@ impl<R: TtyRead, W: TtyWrite> LineDiscipline<R, W> {
         let input_ready = self.input_ready.clone();
         let pump_retry = self.pump_retry.clone();
         let buf_rx = &mut self.buf_rx;
-        let pollable = WaitPollable(Some(&input_ready));
+        let pollable = WaitPollable(Some(input_ready.as_ref()));
         block_on(poll_io(&pollable, IoEvents::IN, false, || {
             total_read += buf_rx.pop_slice(&mut buf[total_read..]);
             pump_retry.as_ref().wake();

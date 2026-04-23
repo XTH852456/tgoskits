@@ -41,27 +41,23 @@ fn handle_console_input_irq() {
 }
 
 fn new_n_tty() -> Arc<NTtyDriver> {
-    let process_mode = match console_irq_mode() {
-        Some(mode) => mode,
-        None => ProcessMode::Manual,
-    };
     Tty::new(
         Arc::default(),
         TtyConfig {
             reader: Console,
             writer: Console,
-            process_mode,
+            process_mode: console_irq_mode().unwrap_or(ProcessMode::Manual),
         },
     )
 }
 
 fn console_irq_mode() -> Option<ProcessMode> {
     let irq = ax_hal::console::irq_num()?;
-    if ax_hal::irq::register(irq, handle_console_input_irq) {
-        ax_hal::console::set_input_irq_enabled(true);
-        Some(ProcessMode::InterruptDriven(CONSOLE_INPUT_SOURCE.clone()))
-    } else {
+    if !ax_hal::irq::register(irq, handle_console_input_irq) {
         warn!("Failed to register console IRQ handler for irq {irq}, falling back to manual mode");
-        None
+        return None;
     }
+
+    ax_hal::console::set_input_irq_enabled(true);
+    Some(ProcessMode::InterruptDriven(CONSOLE_INPUT_SOURCE.clone()))
 }
